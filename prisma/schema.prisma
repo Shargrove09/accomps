@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  color           String? // Hex color for UI
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  accomplishments Accomplishment[]
+}
+
+model Tag {
+  id              String              @id @default(cuid())
+  name            String              @unique
+  description     String?
+  color           String? // Hex color for UI
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  accomplishments AccomplishmentTag[]
+}
+
+model Accomplishment {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  categoryId  String
+  category    Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tags        AccomplishmentTag[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model AccomplishmentTag {
+  id               String         @id @default(cuid())
+  accomplishmentId String
+  tagId            String
+  accomplishment   Accomplishment @relation(fields: [accomplishmentId], references: [id], onDelete: Cascade)
+  tag              Tag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([accomplishmentId, tagId])
+}
