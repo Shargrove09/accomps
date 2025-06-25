@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tailwind custom colors */
+@theme {
+  --color-steel-gray: #1e1e2f; /* Steel Gray */
+  --color-ebony-clay: #292942; /* Ebony Clay */
+  --color-east-bay: #4b4b77; /* East Bay */
+  --color-kimberly: #6c6c99; /* Kimberly */
+  --color-mischka: #d8d8e4; /* Mischka */
 }
 
 @theme inline {
@@ -14,7 +18,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #1e1e2f;
     --foreground: #ededed;
   }
 }
