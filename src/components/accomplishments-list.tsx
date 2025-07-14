@@ -38,12 +38,12 @@ export async function AccomplishmentsList() {
       {accomplishments.map((accomplishment) => (
         <div
           key={accomplishment.id}
-          className="p-6 hover:bg-gray-50 transition-colors"
+          className="p-6 hover:bg-gray-50 transition-colors group"
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-white group-hover:text-gray-900 transition-colors">
                   {accomplishment.title}
                 </h3>
                 <span

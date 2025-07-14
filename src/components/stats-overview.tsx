@@ -22,28 +22,28 @@ export async function StatsOverview() {
       value: totalAccomplishments,
       icon: Award,
       color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      bgColor: "bg-kimberly",
     },
     {
       label: "This Week",
       value: thisWeekCount,
       icon: Calendar,
       color: "text-green-600",
-      bgColor: "bg-green-50",
+      bgColor: "bg-kimberly",
     },
     {
       label: "Categories",
       value: totalCategories,
       icon: TrendingUp,
       color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      bgColor: "bg-kimberly",
     },
     {
       label: "Tags",
       value: totalTags,
       icon: Tag,
       color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      bgColor: "bg-kimberly",
     },
   ];
 
