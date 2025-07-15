@@ -85,3 +85,37 @@ function getRandomColor() {
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+
+export async function getCategories() {
+  try {
+    const categories = await db.category.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+      },
+    });
+    return categories;
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    return [];
+  }
+}
+
+export async function getExistingTags() {
+  try {
+    const tags = await db.tag.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+      },
+    });
+    return tags;
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+    return [];
+  }
+}
