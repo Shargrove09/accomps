@@ -65,7 +65,7 @@ export async function addAccomplishment({
     }
 
     revalidatePath("/");
-    return { success: true };
+    return { success: true, id: accomplishment.id };
   } catch (error) {
     console.error("Error adding accomplishment:", error);
     return { success: false, error: "Failed to add accomplishment" };
@@ -111,6 +111,23 @@ export async function getExistingTags() {
         id: true,
         name: true,
         color: true,
+      },
+    });
+    return tags;
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+    return [];
+  }
+}
+
+export async function getTagsWithAccomplishmentCount() {
+  try {
+    const tags = await db.tag.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: { accomplishments: true },
+        },
       },
     });
     return tags;
