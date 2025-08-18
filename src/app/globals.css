@@ -28,3 +28,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.rbc-day-bg {
+  background-color: var(--color-ebony-clay) !important;
+}
+
+.rbc-today {
+  background-color: var(--color-kimberly) !important;
+}
+
+.rbc-off-range-bg {
+  background-color: var(--color-steel-gray) !important;
+}

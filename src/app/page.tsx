@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { AddAccomplishmentForm } from "@/components/add-accomplishment-form";
 import { AccomplishmentsList } from "@/components/accomplishments-list";
 import { StatsOverview } from "@/components/stats-overview";
@@ -54,21 +55,26 @@ export default function Home() {
       </div>
 
       {/* Quick Actions */}
+      {/* Calendar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
-          <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-          <h3 className="font-semibold text-mischka mb-2">View Calendar</h3>
-          <p className="text-sm text-steel-gray">
-            See your accomplishments organized by date
-          </p>
-        </div>
-        <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
-          <Tag className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-          <h3 className="font-semibold text-mischka mb-2">Manage Tags</h3>
-          <p className="text-sm text-steel-gray">
-            Organize and categorize your achievements
-          </p>
-        </div>
+        <Link href="/calendar">
+          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
+            <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-3" />
+            <h3 className="font-semibold text-mischka mb-2">View Calendar</h3>
+            <p className="text-sm text-steel-gray">
+              See your accomplishments organized by date
+            </p>
+          </div>
+        </Link>
+        <Link href="/tags">
+          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
+            <Tag className="h-8 w-8 text-purple-600 mx-auto mb-3" />
+            <h3 className="font-semibold text-mischka mb-2">Manage Tags</h3>
+            <p className="text-sm text-steel-gray">
+              Organize and categorize your achievements
+            </p>
+          </div>
+        </Link>
         <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
           <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-3" />
           <h3 className="font-semibold text-mischka  mb-2">View Analytics</h3>
