@@ -30,8 +30,10 @@ export async function POST(request: Request) {
       tags,
     });
 
+    console.log("--- Accomplishment added ---:", result);
+
     return NextResponse.json({
-      message: "Accomplishment added successfully",
+      message: "Accomplishment added successfully\n",
       accomplishmentId: result.id,
     });
   } catch (error) {
