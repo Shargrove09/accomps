@@ -9,7 +9,14 @@ packages = ["agent"]
 [project]
 name = "accomps"
 version = "0.1.0"
-description = ""
+description = "Accomplishment tracking agent using LangChain"
 authors = [{ name = "Shargrove09", email = "8881163+Shargrove09@users.noreply.github.com " }]
 requires-python = "~=3.12"
 readme = "README.md"
+dependencies = [
+    "langchain>=1.0.5",
+    "langchain-ollama>=1.0.0",
+    "langgraph>=1.0.3",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+]
