@@ -4,6 +4,24 @@ import { AddAccomplishmentForm } from "@/components/add-accomplishment-form";
 import { AccomplishmentsList } from "@/components/accomplishments-list";
 import { StatsOverview } from "@/components/stats-overview";
 import { Plus, TrendingUp, Calendar, Tag } from "lucide-react";
+import { db } from "@/lib/db";
+
+async function RecentAccomplishments() {
+  const accomplishments = await db.accomplishment.findMany({
+    take: 10,
+    orderBy: { date: "desc" },
+    include: {
+      category: true,
+      tags: {
+        include: {
+          tag: true,
+        },
+      },
+    },
+  });
+
+  return <AccomplishmentsList initialAccomplishments={accomplishments} />;
+}
 
 export default function Home() {
   return (
@@ -50,7 +68,7 @@ export default function Home() {
           </div>
         </div>
         <Suspense fallback={<div className="animate-pulse bg-gray-200 h-64" />}>
-          <AccomplishmentsList />
+          <RecentAccomplishments />
         </Suspense>
       </div>
 

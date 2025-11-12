@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   addAccomplishment,
   getCategories,
@@ -21,6 +22,7 @@ type Tag = {
 };
 
 export function AddAccomplishmentForm() {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -136,6 +138,9 @@ export function AddAccomplishmentForm() {
         color: tag.color || "#6B7280", // Default color if null
       }));
       setAvailableTags(transformedTags);
+
+      // Refresh the page to update the accomplishments list
+      router.refresh();
     });
   };
 
