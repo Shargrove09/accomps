@@ -48,6 +48,19 @@ export function AccomplishmentsList({
     }
   };
 
+  const handleEditSuccess = (updatedAccomplishment: Accomplishment) => {
+    setAccomplishments((prev) =>
+      prev.map((a) =>
+        a.id === updatedAccomplishment.id ? updatedAccomplishment : a
+      )
+    );
+
+    setEditingAccomplishment(null);
+
+    // TODO: Not sure if we need to refresh tot ensure data consistency?
+    router.refresh();
+  };
+
   const handleDelete = (id: string) => {
     setDeletingId(id);
   };
@@ -62,10 +75,6 @@ export function AccomplishmentsList({
         setDeletingId(null);
       }
     });
-  };
-
-  const refreshList = () => {
-    router.refresh();
   };
 
   if (accomplishments.length === 0) {
@@ -144,14 +153,14 @@ export function AccomplishmentsList({
               <div className="flex gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleEdit(accomplishment.id)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors hover:cursor-pointer"
                   title="Edit accomplishment"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(accomplishment.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors hover:cursor-pointer"
                   title="Delete accomplishment"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -166,7 +175,7 @@ export function AccomplishmentsList({
         <EditAccomplishmentForm
           accomplishment={editingAccomplishment}
           onClose={() => setEditingAccomplishment(null)}
-          onSuccess={refreshList}
+          onSuccess={handleEditSuccess}
         />
       )}
 
@@ -184,4 +193,3 @@ export function AccomplishmentsList({
     </>
   );
 }
-

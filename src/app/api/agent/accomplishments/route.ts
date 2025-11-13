@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { addAccomplishment } from "@/lib/actions";
+import { db } from "@/lib/db";
 
 export async function POST(request: Request) {
   const apiKey = request.headers.get("x-api-key");
@@ -42,6 +43,48 @@ export async function POST(request: Request) {
       error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json(
       { error: "Failed to add accomplishment", details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: Request) {
+  const apiKey = request.headers.get("x-api-key");
+  if (apiKey !== process.env.AGENT_API_KEY) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const pageSize = parseInt(searchParams.get("pageSize") || "5");
+    const page = parseInt(searchParams.get("page") || "1");
+
+    const accomplishments = await db.accomplishment.findMany({
+      include: {
+        category: true,
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+      orderBy: {
+        date: "desc",
+      },
+      take: pageSize,
+    });
+
+    return NextResponse.json({
+      accomplishments,
+      page,
+      pageSize,
+    });
+  } catch (error) {
+    console.error("API Error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "An unknown error occurred";
+    return NextResponse.json(
+      { error: "Failed to fetch accomplishments", details: errorMessage },
       { status: 500 }
     );
   }
