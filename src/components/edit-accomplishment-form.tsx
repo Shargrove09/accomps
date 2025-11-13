@@ -46,7 +46,7 @@ export function EditAccomplishmentForm({
 }: {
   accomplishment: Accomplishment;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (updatedAccomplishment: Accomplishment) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(accomplishment.title);
@@ -144,8 +144,8 @@ export function EditAccomplishmentForm({
         tags: tagNames,
       });
 
-      if (result.success) {
-        onSuccess?.();
+      if (result.success && result.data) {
+        onSuccess?.(result.data);
         onClose();
       }
     });
@@ -181,7 +181,7 @@ export function EditAccomplishmentForm({
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                 placeholder="What did you accomplish?"
                 required
               />
@@ -200,7 +200,7 @@ export function EditAccomplishmentForm({
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                     placeholder="New category name"
                     required
                   />
@@ -221,7 +221,7 @@ export function EditAccomplishmentForm({
                   <select
                     value={selectedCategoryId}
                     onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
                     required
                   >
                     <option value="">Select a category</option>
@@ -250,7 +250,7 @@ export function EditAccomplishmentForm({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700"
               placeholder="Add more details (optional)"
             />
           </div>
@@ -326,7 +326,7 @@ export function EditAccomplishmentForm({
                     }
                     e.target.value = "";
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
                 >
                   <option value="">Add a tag...</option>
                   {availableTags
@@ -347,14 +347,14 @@ export function EditAccomplishmentForm({
             <button
               type="submit"
               disabled={isPending || !title.trim() || !category.trim()}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium hover:cursor-pointer"
             >
               {isPending ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
             >
               Cancel
             </button>

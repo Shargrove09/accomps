@@ -231,7 +231,20 @@ export async function updateAccomplishment({
     revalidatePath("/");
     revalidatePath("/calendar");
     revalidatePath("/tags");
-    return { success: true };
+
+    const updatedAccomplishment = await db.accomplishment.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+    });
+
+    return { success: true, data: updatedAccomplishment };
   } catch (error) {
     console.error("Error updating accomplishment:", error);
     return { success: false, error: "Failed to update accomplishment" };

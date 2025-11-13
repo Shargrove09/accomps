@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain.agents import create_agent
-from tool_langchain import add_accomplishment
+from tool_langchain import add_accomplishment, list_accomplishments
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -11,8 +11,9 @@ display_extra = False
 def chat_loop(agent):
     print("\nAccomplishment Agent (LangChain) is ready!")
     print("Type 'exit' to quit.")
-    print("You can now add accomplishments. For example:")
+    print("You can now add or list accomplishments. For example:")
     print("-> Add that I deployed the new feature to production under the 'Work' category, and tag it with 'release' and 'deployment'.")
+    print("-> List my recent accomplishments")
     print("-" * 30)
 
     while True:
@@ -90,17 +91,21 @@ def main():
     )
 
     # Define the tools
-    tools = [add_accomplishment]
+    tools = [add_accomplishment, list_accomplishments]
 
     # Define the system prompt
     system_prompt = """You are a helpful assistant that helps users track their accomplishments.
-        You have access to a tool called 'add_accomplishment' that allows you to add new accomplishments to the database.
+        You have access to tools for managing accomplishments:
+        - add_accomplishment: Adds a new accomplishment to the database
+        - list_accomplishments: Lists existing accomplishments
 
         When a user asks you to add an accomplishment:
         1. Extract the accomplishment title from their request
         2. Identify the category if mentioned (default to 'General' if not specified)
         3. Extract any tags mentioned
         4. Use the add_accomplishment tool with the appropriate parameters
+
+        When a user asks to list or view accomplishments, use the list_accomplishments tool.
 
         Be friendly and confirm when you've successfully added an accomplishment."""
 
