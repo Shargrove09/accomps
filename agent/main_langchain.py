@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain.agents import create_agent
-from tool_langchain import add_accomplishment, list_accomplishments
+from tool_langchain import add_accomplishment, list_accomplishments, list_accomplishments_by_date
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -14,6 +14,8 @@ def chat_loop(agent):
     print("You can now add or list accomplishments. For example:")
     print("-> Add that I deployed the new feature to production under the 'Work' category, and tag it with 'release' and 'deployment'.")
     print("-> List my recent accomplishments")
+    print("-> Show me accomplishments from this week")
+    print("-> What did I accomplish today?")
     print("-" * 30)
 
     while True:
@@ -91,13 +93,14 @@ def main():
     )
 
     # Define the tools
-    tools = [add_accomplishment, list_accomplishments]
+    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date]
 
     # Define the system prompt
     system_prompt = """You are a helpful assistant that helps users track their accomplishments.
         You have access to tools for managing accomplishments:
         - add_accomplishment: Adds a new accomplishment to the database
-        - list_accomplishments: Lists existing accomplishments
+        - list_accomplishments: Lists existing accomplishments with pagination
+        - list_accomplishments_by_date: Lists accomplishments filtered by date range or timeframe
 
         When a user asks you to add an accomplishment:
         1. Extract the accomplishment title from their request
@@ -105,7 +108,13 @@ def main():
         3. Extract any tags mentioned
         4. Use the add_accomplishment tool with the appropriate parameters
 
-        When a user asks to list or view accomplishments, use the list_accomplishments tool.
+        When a user asks to list or view accomplishments:
+        - Use list_accomplishments for general listing with pagination
+        - Use list_accomplishments_by_date when the user mentions a specific time period like:
+          * "today", "yesterday", "this week", "this month", "this year"
+          * A specific date or date range
+        
+        By default, show accomplishments with page size of 5.
 
         Be friendly and confirm when you've successfully added an accomplishment."""
 

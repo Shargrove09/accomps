@@ -58,8 +58,26 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const pageSize = parseInt(searchParams.get("pageSize") || "5");
     const page = parseInt(searchParams.get("page") || "1");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    // Calculate skip for pagination
+    const skip = (page - 1) * pageSize;
+
+    // Build the where clause for date filtering
+    const whereClause: { date?: { gte?: Date; lte?: Date } } = {};
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.gte = new Date(startDate);
+      }
+      if (endDate) {
+        whereClause.date.lte = new Date(endDate);
+      }
+    }
 
     const accomplishments = await db.accomplishment.findMany({
+      where: whereClause,
       include: {
         category: true,
         tags: {
@@ -71,13 +89,24 @@ export async function GET(request: Request) {
       orderBy: {
         date: "desc",
       },
+      skip: skip,
       take: pageSize,
     });
+
+    // Get total count for better pagination info
+    const totalCount = await db.accomplishment.count({
+      where: whereClause,
+    });
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const hasMore = page < totalPages;
 
     return NextResponse.json({
       accomplishments,
       page,
       pageSize,
+      totalCount,
+      totalPages,
+      hasMore,
     });
   } catch (error) {
     console.error("API Error:", error);
