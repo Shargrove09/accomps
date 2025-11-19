@@ -8,10 +8,10 @@ def add_accomplishment(title: str, category: str, tags: str, description: str = 
     Adds a new accomplishment to the tracker.
 
     Args:
-        title (str): The title of the accomplishment. Must be a clear, concise summary.
+        title (str): The title of the accomplishment. Must be a clear, concise summary, corrected for typos and grammar.
         category (str): The category for the accomplishment (e.g., 'Work', 'Learning', 'Personal').
         tags (str): Comma-separated tags to associate with the accomplishment (e.g., 'release,deployment').
-        description (str, optional): A more detailed description of the accomplishment. Defaults to "".
+        description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar. Defaults to "".
     
     Returns:
         str: A message indicating success or failure of the operation.

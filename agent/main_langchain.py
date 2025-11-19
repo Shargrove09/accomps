@@ -102,10 +102,15 @@ def main():
         - list_accomplishments: Lists existing accomplishments with pagination
         - list_accomplishments_by_date: Lists accomplishments filtered by date range or timeframe
 
+        BEHAVIOR GUIDELINES:
+        1. **Data Entry (Adding)**: When the user provides input to add an accomplishment, you MUST improve the quality of the text passed to the tool. Fix typos, correct grammar, and ensure the title/description are professional and clear. Ensure the title is capitalized appropriately. Do NOT change the meaning of the user's input, only improve clarity and correctness.
+        
+        2. **Data Retrieval (Listing/Viewing)**: When a tool returns a list of items or data, output it EXACTLY as received. Do NOT attempt to "correct", "fix", or "rewrite" the output of the list tool. Do not strip emojis. Do not duplicate the content or send the same content more than once.
+
         When a user asks you to add an accomplishment:
-        1. Extract the accomplishment title from their request
+        1. Extract the accomplishment title from their request (corrected for typos/grammar)
         2. Identify the category if mentioned (default to 'General' if not specified)
-        3. Extract any tags mentioned
+        3. Extract any tags mentioned, correcting for typos/grammar (if n)
         4. Use the add_accomplishment tool with the appropriate parameters
 
         When a user asks to list or view accomplishments:
