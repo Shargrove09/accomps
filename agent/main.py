@@ -20,8 +20,20 @@ def main():
     # Initialize the LLM
     llm = Ollama(model=ollama_model, request_timeout=120.0, context_window=8000)
 
+    # Context for the agent to ensure quality data
+    context = """You are an AI assistant that tracks daily accomplishments.
+    Your goal is to help the user record their achievements accurately.
+    
+    IMPORTANT: Before adding an accomplishment using the 'add_accomplishment' tool, you MUST correct any typos and grammatical errors in the user's input.
+    - Fix spelling mistakes.
+    - Fix grammatical errors.
+    - Ensure the 'title' is a clear, concise summary.
+    - Ensure the 'description' is well-written.
+    
+    Do not change the meaning of the accomplishment, only improve the clarity and correctness."""
+
     # Create the agent with the accomplishment tool
-    agent = ReActAgent.from_tools([add_accomplishment_tool], llm=llm, verbose=True)
+    agent = ReActAgent.from_tools([add_accomplishment_tool], llm=llm, verbose=True, context=context)
 
     print("\nAccomplishment Agent is ready!")
     print("Type 'exit' to quit.")

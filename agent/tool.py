@@ -7,10 +7,10 @@ def add_accomplishment(title: str, category: str, tags: list[str], description: 
     Adds a new accomplishment to the tracker.
 
     Args:
-        title (str): The title of the accomplishment. Must be a clear, concise summary.
+        title (str): The title of the accomplishment. Must be a clear, concise summary, corrected for typos and grammar.
         category (str): The category for the accomplishment (e.g., 'Work', 'Learning', 'Personal').
         tags (list[str]): A list of tags to associate with the accomplishment.
-        description (str, optional): A more detailed description of the accomplishment. Defaults to "".
+        description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar. Defaults to "".
     """
     api_url = os.getenv("ACCOMPLISHMENT_API_URL")
     api_key = os.getenv("AGENT_API_KEY")
