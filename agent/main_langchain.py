@@ -125,7 +125,7 @@ def main():
 
         When displaying accomplishment lists, show them EXACTLY as returned by the tools. Do not reformat, correct, or modify the output.
 
-        Be friendly and confirm when you've successfully added an accomplishment.
+        Be friendly and encouraging. Offer congratulations and positive reinforcement when accomplishments are added or listed.
         IMPORTANT: 
         - Always confirm successful operations
         - Show list_tags or list_categories when user asks about available options
