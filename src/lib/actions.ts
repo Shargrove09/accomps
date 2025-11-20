@@ -272,3 +272,22 @@ export async function deleteAccomplishment(id: string) {
     return { success: false, error: "Failed to delete accomplishment" };
   }
 }
+
+export async function getAccomplishmentsByTag(tag: string) {
+  // Direct database query via Prisma
+  return await db.accomplishment.findMany({
+    where: { tags: { some: { tag: { name: tag } } } },
+
+    include: {
+      category: true,
+      tags: {
+        include: {
+          tag: true,
+        },
+      },
+    },
+    orderBy: {
+      date: "desc",
+    },
+  });
+}
