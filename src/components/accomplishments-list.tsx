@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/helpers";
 import { Calendar, Tag, Edit2, Trash2 } from "lucide-react";
 import { EditAccomplishmentForm } from "./edit-accomplishment-form";
 import { ConfirmDialog } from "./confirm-dialog";

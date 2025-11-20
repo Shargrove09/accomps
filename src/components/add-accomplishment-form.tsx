@@ -8,6 +8,7 @@ import {
   getExistingTags,
 } from "@/lib/actions";
 import { Plus, ChevronDown, X } from "lucide-react";
+import { Button } from "./ui/button";
 
 type Category = {
   id: string;
@@ -203,7 +204,7 @@ export function AddAccomplishmentForm() {
                 required
               />
               {categories.length > 0 && (
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setIsCreatingNewCategory(false);
@@ -212,7 +213,7 @@ export function AddAccomplishmentForm() {
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
                   ← Back to existing categories
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -258,13 +259,13 @@ export function AddAccomplishmentForm() {
                   }}
                 >
                   {tag.name}
-                  <button
+                  <Button
                     type="button"
                     onClick={() => handleTagRemove(tag.id)}
                     className="ml-1 text-gray-500 hover:text-gray-700"
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </Button>
                 </span>
               ))}
             </div>
@@ -354,14 +355,14 @@ export function AddAccomplishmentForm() {
       </div>
 
       <div className="flex justify-end">
-        <button
+        <Button
           type="submit"
           disabled={isPending || !title.trim() || !category.trim()}
-          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="inline-flex items-center gap-2 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           <Plus className="h-4 w-4" />
           {isPending ? "Adding..." : "Add Accomplishment"}
-        </button>
+        </Button>
       </div>
     </form>
   );
