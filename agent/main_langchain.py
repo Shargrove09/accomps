@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain.agents import create_agent
-from tool_langchain import add_accomplishment, list_accomplishments, list_accomplishments_by_date
+from tool_langchain import add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -93,25 +93,27 @@ def main():
     )
 
     # Define the tools
-    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date]
+    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment]
 
     # Define the system prompt
     system_prompt = """You are a helpful assistant that helps users track their accomplishments.
-        You have access to tools for managing accomplishments:
-        - add_accomplishment: Adds a new accomplishment to the database
-        - list_accomplishments: Lists existing accomplishments with pagination
-        - list_accomplishments_by_date: Lists accomplishments filtered by date range or timeframe
 
-        BEHAVIOR GUIDELINES:
-        1. **Data Entry (Adding)**: When the user provides input to add an accomplishment, you MUST improve the quality of the text passed to the tool. Fix typos, correct grammar, and ensure the title/description are professional and clear. Ensure the title is capitalized appropriately. Do NOT change the meaning of the user's input, only improve clarity and correctness.
-        
-        2. **Data Retrieval (Listing/Viewing)**: When a tool returns a list of items or data, output it EXACTLY as received. Do NOT attempt to "correct", "fix", or "rewrite" the output of the list tool. Do not strip emojis. Do not duplicate the content or send the same content more than once.
+        AVAILABLE TOOLS:
+        - add_accomplishment: Add a new accomplishment (title, category, tags, description)
+        - list_accomplishments: List accomplishments with pagination (default 5 per page)
+        - list_accomplishments_by_date: Filter by timeframe (today/week/month/year) or date range
+        - list_tags: Show all available tags in the system
+        - list_categories: Show all available categories in the system
+                
+        BEHAVIOR GUIDELINES:        
+        1. **Data Retrieval (Listing/Viewing)**: When a tool returns a list of items or data, output it EXACTLY as received. Do NOT attempt to "correct", "fix", or "rewrite" the output of the list tool. Do not strip emojis. Do not duplicate the content or send the same content more than once.
 
-        When a user asks you to add an accomplishment:
-        1. Extract the accomplishment title from their request (corrected for typos/grammar)
+        WHEN ADDING ACCOMPLISHMENTS:
+        1. Extract the accomplishment title from their request
         2. Identify the category if mentioned (default to 'General' if not specified)
-        3. Extract any tags mentioned, correcting for typos/grammar (if n)
-        4. Use the add_accomplishment tool with the appropriate parameters
+        3. Extract any tags mentioned
+        4. Extract the description if provided (if not provided, you can provide a brief description based on the title)
+        5. Use the add_accomplishment tool with the appropriate parameters
 
         When a user asks to list or view accomplishments:
         - Use list_accomplishments for general listing with pagination
@@ -121,7 +123,14 @@ def main():
         
         By default, show accomplishments with page size of 5.
 
-        Be friendly and confirm when you've successfully added an accomplishment."""
+        When displaying accomplishment lists, show them EXACTLY as returned by the tools. Do not reformat, correct, or modify the output.
+
+        Be friendly and confirm when you've successfully added an accomplishment.
+        IMPORTANT: 
+        - Always confirm successful operations
+        - Show list_tags or list_categories when user asks about available options
+        - Do not invent or hallucinate information
+        """
 
     # Create the agent
     agent = create_agent(

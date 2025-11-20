@@ -1,6 +1,9 @@
 import os
 import requests
 from langchain.tools import tool
+from tool_helpers import fetch_all_tags, fetch_all_categories, normalize_accomplishment_fields
+
+
 
 @tool
 def add_accomplishment(title: str, category: str, tags: str, description: str = "") -> str:
@@ -27,14 +30,21 @@ def add_accomplishment(title: str, category: str, tags: str, description: str = 
         "x-api-key": api_key,
     }
 
-    # Parse tags from comma-separated string to list
-    tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    # Normalize all fields
+    normalized = normalize_accomplishment_fields(
+        title=title,
+        category=category,
+        tags=tags,
+        description=description,
+        api_url=api_url,
+        api_key=api_key
+    )
 
     payload = {
-        "title": title,
-        "description": description,
-        "category": category,
-        "tags": tags_list,
+        "title": normalized["title"],
+        "description": normalized["description"],
+        "category": normalized["category"],
+        "tags": normalized["tags"],
     }
 
     try:
@@ -42,7 +52,7 @@ def add_accomplishment(title: str, category: str, tags: str, description: str = 
         response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
         
         response_data = response.json()
-        return f"Successfully added accomplishment: '{title}'. Response: {response_data.get('message')}"
+        return f"Successfully added accomplishment: '{normalized['title']}'. Response: {response_data.get('message')}"
 
     except requests.exceptions.HTTPError as http_err:
         return f"HTTP error occurred: {http_err}. Response: {response.text}"
@@ -320,3 +330,100 @@ def list_accomplishments_by_date(start_date: str = "", end_date: str = "", timef
         return f"Network error occurred: {req_err}"
     except Exception as e:
         return f"Unexpected error occurred while listing accomplishments: {e}"
+
+@tool
+def list_tags() -> str:
+    """Lists all available tags in the system.
+    
+    Use this tool to see what tags are already defined to maintain consistency.
+    """
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured."
+
+    tags = fetch_all_tags(api_url, api_key)
+    
+    if not tags:
+        return "No tags found or error fetching tags."
+        
+    return f"Available tags ({len(tags)}): {', '.join(tags)}"
+
+@tool
+def list_categories() -> str:
+    """Lists all available categories in the system.
+    
+    Use this tool to see what categories are already defined to maintain consistency.
+    """
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured."
+
+    categories = fetch_all_categories(api_url, api_key)
+    
+    if not categories:
+        return "No categories found or error fetching categories."
+        
+    return f"Available categories ({len(categories)}): {', '.join(categories)}"
+
+@tool
+def update_accomplishment(accomplishment_id: str, title: str = "", category: str = "", tags: str = "", description: str = "") -> str:
+    """
+    Updates an existing accomplishment in the tracker.
+
+    Args:
+        accomplishment_id (str): The unique identifier of the accomplishment to update.
+        title (str, optional): The new title of the accomplishment. Defaults to "".
+        category (str, optional): The new category for the accomplishment. Defaults to "".
+        tags (str, optional): Comma-separated new tags to associate with the accomplishment. Defaults to "".
+        description (str, optional): A new detailed description of the accomplishment. Defaults to "".
+    
+    Returns:
+        str: A message indicating success or failure of the operation.
+    """
+    # Implementation would be similar to add_accomplishment but using PATCH or PUT method
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured. Please check your .env file."
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+    }
+
+    payload = {}
+    if title:
+        payload["title"] = title
+    if category:
+        payload["category"] = category
+    if tags:
+        payload["tags"] = tags
+    if description:
+        payload["description"] = description
+
+    if not payload:
+        return "No fields to update were provided."
+
+    try:
+        response = requests.patch(f"{api_url}/accomplishments/{accomplishment_id}", json=payload, headers=headers)
+        response.raise_for_status()
+        return f"Accomplishment with ID {accomplishment_id} updated successfully."
+    except requests.exceptions.HTTPError as http_err:
+        status_code = response.status_code if 'response' in locals() else 'unknown'
+        if status_code == 401:
+            return "Error: Authentication failed. The API key may be invalid."
+        elif status_code == 404:
+            return f"Error: Accomplishment with ID {accomplishment_id} not found."
+        else:
+            return f"HTTP error {status_code}: {http_err}. Response: {response.text}"
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to the API. Is the server running?"
+    except requests.exceptions.RequestException as req_err:
+        return f"Network error occurred: {req_err}"
+    except Exception as e:
+        return f"Unexpected error occurred while updating accomplishment: {e}"
