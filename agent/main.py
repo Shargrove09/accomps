@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain.agents import create_agent
-from agent.tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment
+from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment
 from langgraph.checkpoint.memory import InMemorySaver
 
 
