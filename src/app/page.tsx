@@ -5,22 +5,33 @@ import { AccomplishmentsList } from "@/components/accomplishments-list";
 import { StatsOverview } from "@/components/stats-overview";
 import { Plus, TrendingUp, Calendar, Tag } from "lucide-react";
 import { db } from "@/lib/db";
+import { getCategories, getExistingTags } from "@/lib/actions";
 
 async function RecentAccomplishments() {
-  const accomplishments = await db.accomplishment.findMany({
-    take: 10,
-    orderBy: { date: "desc" },
-    include: {
-      category: true,
-      tags: {
-        include: {
-          tag: true,
+  const [accomplishments, categories, tags] = await Promise.all([
+    db.accomplishment.findMany({
+      take: 10,
+      orderBy: { date: "desc" },
+      include: {
+        category: true,
+        tags: {
+          include: {
+            tag: true,
+          },
         },
       },
-    },
-  });
+    }),
+    getCategories(),
+    getExistingTags(),
+  ]);
 
-  return <AccomplishmentsList initialAccomplishments={accomplishments} />;
+  return (
+    <AccomplishmentsList
+      initialAccomplishments={accomplishments}
+      categories={categories}
+      tags={tags}
+    />
+  );
 }
 
 export default function Home() {
@@ -65,6 +76,12 @@ export default function Home() {
                 Recent Accomplishments
               </h2>
             </div>
+            <Link
+              href="/accomplishments"
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              View All →
+            </Link>
           </div>
         </div>
         <Suspense fallback={<div className="animate-pulse bg-gray-200 h-64" />}>
@@ -76,7 +93,7 @@ export default function Home() {
       {/* Calendar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link href="/calendar">
-          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
+          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center hover:bg-ebony-clay transition-colors">
             <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-3" />
             <h3 className="font-semibold text-mischka mb-2">View Calendar</h3>
             <p className="text-sm text-steel-gray">
@@ -85,7 +102,7 @@ export default function Home() {
           </div>
         </Link>
         <Link href="/tags">
-          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
+          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center hover:bg-ebony-clay transition-colors">
             <Tag className="h-8 w-8 text-purple-600 mx-auto mb-3" />
             <h3 className="font-semibold text-mischka mb-2">Manage Tags</h3>
             <p className="text-sm text-steel-gray">
@@ -93,7 +110,7 @@ export default function Home() {
             </p>
           </div>
         </Link>
-        <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center">
+        <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center opacity-60 cursor-not-allowed">
           <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-3" />
           <h3 className="font-semibold text-mischka  mb-2">View Analytics</h3>
           <p className="text-sm text-steel-gray ">
