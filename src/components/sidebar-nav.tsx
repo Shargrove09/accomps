@@ -3,11 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Calendar, Tag, X, Menu } from "lucide-react";
+import { Home, Calendar, Tag, X, Menu, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/accomplishments", label: "All Accomplishments", icon: ListChecks },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/tags", label: "Tags", icon: Tag },
 ];
