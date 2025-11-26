@@ -25,7 +25,7 @@ export function SidebarNav() {
       {/* Hamburger Menu Button */}
       <button
         onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-east-bay hover:bg-ebony-clay transition-colors shadow-lg border border-kimberly"
+        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-east-bay hover:bg-ebony-clay transition-colors shadow-lg border border-kimberly hover:cursor-pointer"
         aria-label="Toggle menu"
       >
         {isOpen ? (

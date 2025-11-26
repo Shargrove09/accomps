@@ -143,7 +143,7 @@ export function AccomplishmentsList({
 
     setEditingAccomplishment(null);
 
-    // TODO: Not sure if we need to refresh tot ensure data consistency?
+    // TODO: Not sure if we need to refresh to ensure data consistency?
     router.refresh();
   };
 
@@ -185,14 +185,14 @@ export function AccomplishmentsList({
             <label className="text-sm font-medium text-kimberly mb-2 block">
               Categories
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 pt-1 pl-1">
               {categories.map((category) => {
                 const isSelected = selectedCategories.includes(category.name);
                 return (
                   <button
                     key={category.id}
                     onClick={() => toggleCategory(category.name)}
-                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all hover:cursor-pointer ${
                       isSelected
                         ? "text-white ring-2 ring-white"
                         : "text-white opacity-60 hover:opacity-100"
@@ -213,14 +213,14 @@ export function AccomplishmentsList({
             <label className="text-sm font-medium text-kimberly mb-2 block">
               Tags
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 pt-1 pl-1">
               {tags.map((tag) => {
                 const isSelected = selectedTags.includes(tag.name);
                 return (
                   <button
                     key={tag.id}
                     onClick={() => toggleTag(tag.name)}
-                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all hover:cursor-pointer  ${
                       isSelected
                         ? "text-white ring-2 ring-white"
                         : "text-white opacity-60 hover:opacity-100"
@@ -244,7 +244,7 @@ export function AccomplishmentsList({
             </span>
             <button
               onClick={clearFilters}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-mischka bg-east-bay hover:bg-kimberly rounded-md transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-mischka bg-east-bay hover:bg-kimberly rounded-md transition-colors hover:cursor-pointer"
             >
               <X className="h-4 w-4" />
               Clear Filters
