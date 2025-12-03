@@ -30,3 +30,10 @@ export type FilterOptions = {
   };
   search?: string;
 };
+
+export type ParsedAccomplishment = {
+  title: string;
+  description?: string;
+  category?: string;
+  tags: string[];
+};
