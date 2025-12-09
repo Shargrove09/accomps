@@ -2,6 +2,18 @@ import { getAccomplishmentsByTag } from "@/lib/actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+// Define a type for the accomplishment data structure
+// This tells TypeScript what properties to expect on each accomplishment object.
+type AccomplishmentWithCategory = {
+  id: string;
+  title: string;
+  description: string | null;
+  date: Date;
+  category: {
+    name: string;
+  } | null;
+};
+
 interface TagPageProps {
   tagName: string;
 
@@ -40,7 +52,7 @@ export default async function TagPage({
       </div>
 
       <div className="space-y-4">
-        {accomplishments.map((accomplishment) => (
+        {accomplishments.map((accomplishment: AccomplishmentWithCategory) => (
           <div
             key={accomplishment.id}
             className="bg-ebony-clay rounded-lg shadow-sm border border-kimberly p-6"
