@@ -13,7 +13,8 @@ This directory contains a Python-based AI agent that uses LlamaIndex and Ollama 
 2.  **Configure Environment**:
 
     - Copy the `.env` file.
-    - `AGENT_API_KEY`: Set a secure, secret key. This same key must be added to a `.env.local` file in the root of your Next.js project.
+    - `AGENT_API_KEY`: Set a secure, secret ke
+      `y. This same key must be added to a `.env.local` file in the root of your Next.js project.
     - `ACCOMPLISHMENT_API_URL`: This is pre-configured for the local Next.js development server.
     - `OLLAMA_MODEL`: (Optional) Specify which Ollama model to use (e.g., `llama3`, `mistral`). Defaults to `llama3`.
 

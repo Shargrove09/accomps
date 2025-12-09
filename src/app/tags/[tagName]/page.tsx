@@ -3,13 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 interface TagPageProps {
-  params: {
-    tagName: string;
-  };
+  tagName: string;
+
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default async function TagPage({ params }: TagPageProps) {
-  const decodedTagName = decodeURIComponent(params.tagName);
+export default async function TagPage({
+  params,
+}: {
+  params: Promise<TagPageProps>;
+}) {
+  const decodedTagName = decodeURIComponent((await params).tagName);
   const accomplishments = await getAccomplishmentsByTag(decodedTagName);
 
   if (accomplishments.length === 0) {
