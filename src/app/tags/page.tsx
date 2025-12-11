@@ -2,7 +2,7 @@ import { getTagsWithAccomplishmentCount } from "@/lib/actions";
 import Link from "next/link";
 
 // Mark this page as dynamic to prevent static evaluation during build
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 type Tag = {
   id: string;
