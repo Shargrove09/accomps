@@ -5,7 +5,7 @@ import { AccomplishmentsList } from "@/components/accomplishments-list";
 import { TrendingUp } from "lucide-react";
 
 // Mark this page as dynamic to prevent static evaluation during build
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 async function AllAccomplishments() {
   const [accomplishments, categories, tags] = await Promise.all([

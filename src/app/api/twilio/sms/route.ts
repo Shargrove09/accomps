@@ -4,7 +4,7 @@ import { addAccomplishment } from "@/lib/actions";
 import { ParsedAccomplishment } from "@/lib/types";
 
 // Mark this route as dynamic to prevent static evaluation during build
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Basic SMS webhook handler for Twilio.
 // - Expects application/x-www-form-urlencoded body
@@ -52,7 +52,9 @@ export async function POST(req: NextRequest) {
     }
 
     return xmlResponse(
-      `Logged: ${structuredAccomplishment.title} (category: ${structuredAccomplishment.category ?? defaultCategory}).`
+      `Logged: ${structuredAccomplishment.title} (category: ${
+        structuredAccomplishment.category ?? defaultCategory
+      }).`
     );
   } catch (error) {
     console.error("Error handling Twilio SMS:", error);
