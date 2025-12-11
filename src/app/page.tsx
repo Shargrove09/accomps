@@ -7,6 +7,9 @@ import { Plus, TrendingUp, Calendar, Tag } from "lucide-react";
 import { db } from "@/lib/db";
 import { getCategories, getExistingTags } from "@/lib/actions";
 
+// Mark this page as dynamic to prevent static evaluation during build
+export const dynamic = 'force-dynamic';
+
 async function RecentAccomplishments() {
   const [accomplishments, categories, tags] = await Promise.all([
     db.accomplishment.findMany({
