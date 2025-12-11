@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { addAccomplishment } from "@/lib/actions";
 import twilio from "twilio";
 
+// Mark this route as dynamic to prevent static evaluation during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     // Parse the form data from Twilio

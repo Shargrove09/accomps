@@ -1,6 +1,9 @@
 import AccomplishmentsCalendar from "@/components/accomplishments-calendar";
 import { db } from "@/lib/db";
 
+// Mark this page as dynamic to prevent static evaluation during build
+export const dynamic = 'force-dynamic';
+
 export default async function CalendarPage() {
   const accomplishments = await db.accomplishment.findMany();
 

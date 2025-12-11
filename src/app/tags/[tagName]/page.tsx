@@ -2,6 +2,9 @@ import { getAccomplishmentsByTag } from "@/lib/actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+// Mark this page as dynamic to prevent static evaluation during build
+export const dynamic = 'force-dynamic';
+
 // Define a type for the accomplishment data structure
 // This tells TypeScript what properties to expect on each accomplishment object.
 type AccomplishmentWithCategory = {

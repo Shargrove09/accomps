@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import twilio from "twilio";
 
+// Mark this route as dynamic to prevent static evaluation during build
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   // Security: Verify the request is from Vercel Cron
   // Vercel automatically adds this header when running cron jobs

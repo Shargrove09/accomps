@@ -3,6 +3,9 @@ import type { NextRequest } from "next/server";
 import { addAccomplishment } from "@/lib/actions";
 import { ParsedAccomplishment } from "@/lib/types";
 
+// Mark this route as dynamic to prevent static evaluation during build
+export const dynamic = 'force-dynamic';
+
 // Basic SMS webhook handler for Twilio.
 // - Expects application/x-www-form-urlencoded body
 // - Uses Ollama/agent (optional) to interpret text
