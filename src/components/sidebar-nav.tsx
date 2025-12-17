@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Calendar, Tag, X, Menu, ListChecks } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, Calendar, Tag, X, Menu, ListChecks, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -15,10 +15,33 @@ const navItems = [
 
 export function SidebarNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const closeSidebar = () => setIsOpen(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // Redirect to login page
+        router.push("/login");
+        router.refresh();
+      } else {
+        console.error("Logout failed");
+        setIsLoggingOut(false);
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -93,7 +116,20 @@ export function SidebarNav() {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-kimberly">
+          <div className="p-4 border-t border-kimberly space-y-3">
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors w-full group",
+                "text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="font-medium">
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </span>
+            </button>
             <p className="text-xs text-kimberly text-center">
               Accomplishments Tracker
             </p>
