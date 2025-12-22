@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import twilio from "twilio";
+import { Resend } from "resend";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -16,15 +16,14 @@ export async function GET(request: Request) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-  const toNumber = process.env.USER_PHONE_NUMBER;
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.FROM_EMAIL;
+  const toEmail = process.env.USER_EMAIL;
 
-  if (!accountSid || !authToken || !fromNumber || !toNumber) {
-    console.error("Missing Twilio configuration");
+  if (!resendApiKey || !fromEmail || !toEmail) {
+    console.error("Missing Resend configuration");
     return NextResponse.json(
-      { error: "Missing Twilio configuration" },
+      { error: "Missing Resend configuration" },
       { status: 500 }
     );
   }
@@ -53,14 +52,22 @@ export async function GET(request: Request) {
       });
     }
 
-    // Initialize Twilio client
-    const client = twilio(accountSid, authToken);
+    // Initialize Resend client
+    const resend = new Resend(resendApiKey);
 
-    // Send reminder
-    await client.messages.create({
-      body: "👋 Hey! You haven't logged an accomplishment yet today. What did you achieve? Reply to this message to log it.",
-      from: fromNumber,
-      to: toNumber,
+    // Send reminder email
+    await resend.emails.send({
+      from: fromEmail,
+      to: toEmail,
+      subject: "Daily Accomplishment Reminder",
+      text: "👋 Hey! You haven't logged an accomplishment yet today. What did you achieve? Reply to this email to log it.",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>👋 Daily Accomplishment Reminder</h2>
+          <p>Hey! You haven't logged an accomplishment yet today.</p>
+          <p>What did you achieve? Reply to this email to log it.</p>
+        </div>
+      `,
     });
 
     return NextResponse.json({
