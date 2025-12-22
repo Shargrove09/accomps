@@ -40,7 +40,7 @@ export default async function TagPage({
         <div>
           <Link
             href="/tags"
-            className="text-steel-gray outline outline-mischka bg-kimberly p-2 rounded-xl hover:text-mischka mb-2 inline-block"
+            className="text-mischka outline outline-mischka bg-kimberly p-2 rounded-xl hover:text-mischka mb-2 inline-block"
           >
             ← Back to all tags
           </Link>
@@ -64,9 +64,7 @@ export default async function TagPage({
               {accomplishment.title}
             </h3>
             {accomplishment.description && (
-              <p className="text-steel-gray mb-3">
-                {accomplishment.description}
-              </p>
+              <p className="text-kimberly mb-3">{accomplishment.description}</p>
             )}
             <div className="flex items-center gap-4 text-sm text-kimberly">
               <span>{new Date(accomplishment.date).toLocaleDateString()}</span>

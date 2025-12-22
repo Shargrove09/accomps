@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/helpers";
 import { Calendar, Tag, Edit2, Trash2, Search, X } from "lucide-react";
@@ -57,6 +57,11 @@ export function AccomplishmentsList({
     useState<Accomplishment | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // Sync local state when initialAccomplishments changes (e.g., after adding new accomplishment)
+  useEffect(() => {
+    setAccomplishments(initialAccomplishments);
+  }, [initialAccomplishments]);
 
   // Filter state
   const [searchText, setSearchText] = useState("");
