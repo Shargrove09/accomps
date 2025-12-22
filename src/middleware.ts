@@ -5,8 +5,15 @@ export function middleware(request: NextRequest) {
   // Get the pathname from the request
   const { pathname } = request.nextUrl;
 
-  // Skip authentication check for login page and auth API routes
-  if (pathname === "/login" || pathname.startsWith("/api/auth")) {
+  // Skip authentication check for login page and public API routes
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/api/resend") ||
+    pathname.startsWith("/api/twilio") || // TODO: Not using Twilio currently
+    pathname.startsWith("/api/webhooks")
+  ) {
     return NextResponse.next();
   }
 

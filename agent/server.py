@@ -14,9 +14,9 @@ app = FastAPI(title="Accomplishment Agent API")
 
 # --- Data Models ---
 
-class SmsInput(BaseModel):
+class MessageInput(BaseModel):
     input: str
-    source: str = "twilio-sms"
+    source: str = "message"
 
 class AccomplishmentParsed(BaseModel):
     title: str
@@ -39,7 +39,7 @@ parser = JsonOutputParser(pydantic_object=AccomplishmentParsed)
 
 # Prompt to extract structured data from natural language
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a helpful assistant that extracts structured data from SMS messages about accomplishments.
+    ("system", """You are a helpful assistant that extracts structured data from messages about accomplishments.
     
     Your goal is to extract:
     - title: A concise summary of the accomplishment.
@@ -61,8 +61,8 @@ chain = prompt | llm | parser
 async def health_check():
     return {"status": "ok", "model": ollama_model}
 
-@app.post("/api/parse-sms")
-async def parse_sms(data: SmsInput, x_api_key: Optional[str] = Header(None)):
+@app.post("/api/parse-message")
+async def parse_message(data: MessageInput, x_api_key: Optional[str] = Header(None)):
     # Verify API Key
     expected_key = os.getenv("AGENT_API_KEY")
     if expected_key and x_api_key != expected_key:
@@ -71,7 +71,7 @@ async def parse_sms(data: SmsInput, x_api_key: Optional[str] = Header(None)):
     if not data.input.strip():
         raise HTTPException(status_code=400, detail="Input cannot be empty")
 
-    print(f"Processing SMS: {data.input}")
+    print(f"Processing message from {data.source}: {data.input}")
 
     try:
         # Invoke the LLM chain
@@ -84,12 +84,12 @@ async def parse_sms(data: SmsInput, x_api_key: Optional[str] = Header(None)):
         return result
 
     except Exception as e:
-        print(f"Error parsing SMS: {e}")
+        print(f"Error parsing message: {e}")
         # Fallback: return the input as title if parsing fails
         return {
             "title": data.input,
-            "category": "SMS",
-            "tags": ["sms", "unparsed"],
+            "category": "General",
+            "tags": [data.source, "unparsed"],
             "description": "Failed to parse structured data."
         }
 
