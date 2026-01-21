@@ -23,6 +23,9 @@ class AccomplishmentParsed(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     tags: List[str] = []
+    confidence: float = 1.0
+    status: str = "parsed"
+    reasoning: Optional[str] = None
 
 # --- LLM Setup ---
 
@@ -39,17 +42,23 @@ parser = JsonOutputParser(pydantic_object=AccomplishmentParsed)
 
 # Prompt to extract structured data from natural language
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a helpful assistant that extracts structured data from messages about accomplishments.
-    
-    Your goal is to extract:
-    - title: A concise summary of the accomplishment.
-    - description: Any additional details provided (optional).
-    - category: The most appropriate category (e.g., Work, Personal, Learning, Health). Infer if not explicit.
-    - tags: A list of relevant tags (e.g., 'coding', 'fitness', 'bugfix').
-    
-    Return ONLY a valid JSON object matching the requested structure.
+    (
+        "system",
+        """You are a helpful assistant that extracts structured data from accomplishment-focused messages.
+
+    Your response MUST be valid JSON that matches the provided schema. Populate:
+    - title: concise accomplishment summary (string, required)
+    - description: supporting detail (string, optional)
+    - category: best-fit category (string, optional, infer when possible)
+    - tags: relevant short keywords (array of strings, optional)
+    - confidence: float from 0 to 1 indicating how certain you are (1 = certain)
+    - status: "parsed" when confident, otherwise "low_confidence"
+    - reasoning: brief explanation when confidence < 0.75
+
+    Never invent accomplishments if the input is unrelated; instead lower confidence and explain.
     {format_instructions}
-    """),
+    """,
+    ),
     ("human", "{input}"),
 ])
 
@@ -79,9 +88,23 @@ async def parse_message(data: MessageInput, x_api_key: Optional[str] = Header(No
             "input": data.input,
             "format_instructions": parser.get_format_instructions()
         })
-        
-        print(f"Parsed result: {result}")
-        return result
+
+        parsed_dict = result.dict() if isinstance(result, AccomplishmentParsed) else result
+        confidence = parsed_dict.get("confidence", 1.0)
+        # Clamp confidence into valid range to avoid downstream surprises
+        confidence = max(0.0, min(1.0, float(confidence)))
+        status = parsed_dict.get("status") or ("parsed" if confidence >= 0.75 else "low_confidence")
+
+        enriched_response = {
+            **parsed_dict,
+            "confidence": confidence,
+            "status": status,
+            "raw_input": data.input,
+            "source": data.source,
+        }
+
+        print(f"Parsed result: {enriched_response}")
+        return enriched_response
 
     except Exception as e:
         print(f"Error parsing message: {e}")
@@ -90,7 +113,12 @@ async def parse_message(data: MessageInput, x_api_key: Optional[str] = Header(No
             "title": data.input,
             "category": "General",
             "tags": [data.source, "unparsed"],
-            "description": "Failed to parse structured data."
+            "description": "Failed to parse structured data.",
+            "confidence": 0.0,
+            "status": "fallback",
+            "raw_input": data.input,
+            "source": data.source,
+            "reasoning": str(e),
         }
 
 if __name__ == "__main__":
