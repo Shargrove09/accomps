@@ -11,7 +11,6 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/resend") ||
-    pathname.startsWith("/api/twilio") || // TODO: Not using Twilio currently
     pathname.startsWith("/api/webhooks")
   ) {
     return NextResponse.next();

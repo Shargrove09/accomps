@@ -18,13 +18,13 @@ export async function GET(request: Request) {
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.FROM_EMAIL;
-  const toEmail = process.env.USER_EMAIL;
+  const toEmail = process.env.NOTIFICATION_RECIPIENT_EMAIL;
 
   if (!resendApiKey || !fromEmail || !toEmail) {
     console.error("Missing Resend configuration");
     return NextResponse.json(
       { error: "Missing Resend configuration" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
         error: "Internal Server Error",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
