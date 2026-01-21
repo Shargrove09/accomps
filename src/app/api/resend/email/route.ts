@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { Resend } from "resend";
 
-import { addAccomplishment } from "@/lib/actions";
+import { addAccomplishment, createPendingAccomplishment } from "@/lib/actions";
 import { ParsedAccomplishment } from "@/lib/types";
 
 // Mark this route as dynamic to prevent static evaluation during build
@@ -13,6 +13,12 @@ const agentUrl = process.env.AGENT_EMAIL_URL;
 const agentApiKey = process.env.AGENT_API_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 const fromEmail = process.env.FROM_EMAIL;
+const configuredConfidenceThreshold = Number(
+  process.env.AGENT_CONFIDENCE_THRESHOLD ?? "0.6",
+);
+const manualReviewThreshold = Number.isFinite(configuredConfidenceThreshold)
+  ? configuredConfidenceThreshold
+  : 0.6;
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +58,7 @@ export async function POST(req: NextRequest) {
     if (!emailContent) {
       console.log("❌ Failed to fetch email content");
       await sendConfirmationEmail(from, "Failed to retrieve email content.");
-      return new Response("OK", { status: 200 });
+      return new Response("Failed to retrieve email content", { status: 502 });
     }
 
     console.log("Email content retrieved:", {
@@ -72,7 +78,7 @@ export async function POST(req: NextRequest) {
     if (!body) {
       console.log("⚠️ Empty body received");
       await sendConfirmationEmail(from, "Please send a non-empty message.");
-      return new Response("OK", { status: 200 });
+      return new Response("Empty body", { status: 422 });
     }
 
     console.log("🤖 Parsing with agent...");
@@ -81,6 +87,45 @@ export async function POST(req: NextRequest) {
       "Parsed accomplishment:",
       JSON.stringify(structuredAccomplishment, null, 2),
     );
+
+    if (requiresManualReview(structuredAccomplishment)) {
+      console.log("⚠️ Low confidence parse detected, queueing for review");
+      const queueResult = await createPendingAccomplishment({
+        title: structuredAccomplishment.title,
+        description: structuredAccomplishment.description,
+        category: structuredAccomplishment.category,
+        tags: structuredAccomplishment.tags ?? [],
+        rawInput: body,
+        source: from,
+        confidence: structuredAccomplishment.confidence,
+        reasoning: structuredAccomplishment.reasoning,
+        errorMessage:
+          structuredAccomplishment.status === "fallback"
+            ? "Parser fallback triggered"
+            : undefined,
+      });
+
+      if (!queueResult.success) {
+        console.log(
+          "❌ Failed to queue accomplishment for review:",
+          queueResult.error,
+        );
+        await sendConfirmationEmail(
+          from,
+          "We received your email but could not enqueue it for review. Please try again later.",
+        );
+        return new Response("Failed to queue pending accomplishment", {
+          status: 500,
+        });
+      }
+
+      console.log("🗂️ Queued pending accomplishment", queueResult.data?.id);
+      await sendConfirmationEmail(
+        from,
+        `We received your accomplishment but queued it for manual review before it posts. We'll notify you after approval. Reference: ${queueResult.data?.id}`,
+      );
+      return new Response("Queued for manual review", { status: 202 });
+    }
 
     console.log("💾 Adding to database...");
     const result = await addAccomplishment({
@@ -101,7 +146,7 @@ export async function POST(req: NextRequest) {
         from,
         `Failed to log accomplishment: ${result.error || "Unknown error"}`,
       );
-      return new Response("OK", { status: 200 });
+      return new Response("Failed to add accomplishment", { status: 500 });
     }
 
     console.log("✅ Successfully added accomplishment!");
@@ -112,7 +157,7 @@ export async function POST(req: NextRequest) {
       }).`,
     );
 
-    return new Response("OK", { status: 200 });
+    return new Response("Accomplishment logged", { status: 200 });
   } catch (error) {
     console.error("❌ Error handling Resend email:", error);
     console.error(
@@ -203,6 +248,16 @@ async function parseWithAgent(message: string): Promise<ParsedAccomplishment> {
       tags: Array.isArray(data.tags)
         ? data.tags.filter((t: unknown) => typeof t === "string")
         : [],
+      confidence:
+        typeof data.confidence === "number"
+          ? Math.max(0, Math.min(1, data.confidence))
+          : undefined,
+      status: typeof data.status === "string" ? data.status : undefined,
+      reasoning:
+        typeof data.reasoning === "string" ? data.reasoning : undefined,
+      raw_input:
+        typeof data.raw_input === "string" ? data.raw_input : undefined,
+      source: typeof data.source === "string" ? data.source : undefined,
     };
   } catch (error) {
     console.error("Error calling agent from email route:", error);
@@ -217,6 +272,9 @@ function fallbackParse(message: string): ParsedAccomplishment {
     description: undefined,
     category: undefined,
     tags: ["email"],
+    confidence: 0,
+    status: "fallback",
+    reasoning: "Fallback parser used",
   };
 }
 
@@ -243,4 +301,14 @@ async function sendConfirmationEmail(
   } catch (error) {
     console.error("Error sending confirmation email:", error);
   }
+}
+
+function requiresManualReview(accomplishment: ParsedAccomplishment): boolean {
+  const confidence = accomplishment.confidence ?? 0;
+  const status = accomplishment.status ?? "parsed";
+  return (
+    confidence < manualReviewThreshold ||
+    status === "fallback" ||
+    status === "low_confidence"
+  );
 }

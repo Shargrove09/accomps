@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { PendingStatus } from "@prisma/client";
 
 export async function addAccomplishment({
   title,
@@ -290,4 +291,101 @@ export async function getAccomplishmentsByTag(tag: string) {
       date: "desc",
     },
   });
+}
+
+export async function createPendingAccomplishment({
+  title,
+  description,
+  category,
+  tags,
+  rawInput,
+  source,
+  confidence,
+  status = PendingStatus.QUEUED,
+  reasoning,
+  errorMessage,
+}: {
+  title?: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  rawInput: string;
+  source?: string;
+  confidence?: number;
+  status?: PendingStatus;
+  reasoning?: string;
+  errorMessage?: string;
+}) {
+  try {
+    const pending = await db.pendingAccomplishment.create({
+      data: {
+        title,
+        description,
+        category,
+        tags: tags ?? [],
+        rawInput,
+        source,
+        confidence: confidence ?? 0,
+        status,
+        reasoning,
+        errorMessage,
+      },
+    });
+    return { success: true, data: pending };
+  } catch (error) {
+    console.error("Error creating pending accomplishment:", error);
+    return { success: false, error: "Failed to queue pending accomplishment" };
+  }
+}
+
+export async function approvePendingAccomplishment({
+  id,
+  reviewer,
+  reviewerNotes,
+  fallbackCategory = "General",
+}: {
+  id: string;
+  reviewer?: string;
+  reviewerNotes?: string;
+  fallbackCategory?: string;
+}) {
+  try {
+    const pending = await db.pendingAccomplishment.findUnique({
+      where: { id },
+    });
+
+    if (!pending) {
+      return { success: false, error: "Pending accomplishment not found" };
+    }
+
+    if (pending.status !== PendingStatus.QUEUED) {
+      return { success: false, error: "Pending accomplishment already processed" };
+    }
+
+    const result = await addAccomplishment({
+      title: pending.title ?? pending.rawInput.slice(0, 120),
+      description: pending.description ?? undefined,
+      category: pending.category ?? fallbackCategory,
+      tags: pending.tags.length > 0 ? pending.tags : ["pending-approved"],
+    });
+
+    if (!result.success) {
+      return result;
+    }
+
+    await db.pendingAccomplishment.update({
+      where: { id },
+      data: {
+        status: PendingStatus.APPROVED,
+        reviewerNotes,
+        processedBy: reviewer,
+        approvedAt: new Date(),
+      },
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error approving pending accomplishment:", error);
+    return { success: false, error: "Failed to approve pending accomplishment" };
+  }
 }
