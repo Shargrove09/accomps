@@ -144,7 +144,7 @@ async function fetchEmailContent(
     // Documentation: https://resend.com/docs/api-reference/emails/retrieve-email
     const email = await resend.emails.receiving.get(emailId);
 
-    console.log("Fetched email structure:", JSON.stringify(email, null, 2));
+    console.log("Fetched email:", JSON.stringify(email, null, 2));
 
     return {
       text: email.data?.text || undefined,
