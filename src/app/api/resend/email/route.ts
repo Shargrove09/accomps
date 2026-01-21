@@ -7,7 +7,7 @@ import { ParsedAccomplishment } from "@/lib/types";
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
 
-const allowedEmail = process.env.ALLOWED_EMAIL;
+const allowedEmail = process.env.INBOUND_SENDER_WHITELIST;
 const defaultCategory = process.env.EMAIL_DEFAULT_CATEGORY ?? "Email";
 const agentUrl = process.env.AGENT_EMAIL_URL;
 const agentApiKey = process.env.AGENT_API_KEY;
