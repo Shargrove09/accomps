@@ -18,6 +18,7 @@ This is a Next.js TypeScript application for tracking daily accomplishments with
 - **UI**: Tailwind CSS with shadcn/ui components
 - **Charts**: Recharts for data visualization
 - **State Management**: React hooks and server components
+- **Deployment**: Vercel
 
 ## Code Style Guidelines
 

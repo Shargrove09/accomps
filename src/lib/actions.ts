@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { PendingStatus } from "@prisma/client";
+import { PendingStatus } from "@/generated/prisma/client";
 
 export async function addAccomplishment({
   title,
@@ -359,7 +359,10 @@ export async function approvePendingAccomplishment({
     }
 
     if (pending.status !== PendingStatus.QUEUED) {
-      return { success: false, error: "Pending accomplishment already processed" };
+      return {
+        success: false,
+        error: "Pending accomplishment already processed",
+      };
     }
 
     const result = await addAccomplishment({
@@ -386,6 +389,9 @@ export async function approvePendingAccomplishment({
     return result;
   } catch (error) {
     console.error("Error approving pending accomplishment:", error);
-    return { success: false, error: "Failed to approve pending accomplishment" };
+    return {
+      success: false,
+      error: "Failed to approve pending accomplishment",
+    };
   }
 }
