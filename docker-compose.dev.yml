@@ -1,0 +1,28 @@
+version: "3.8"
+
+# Development overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+      # Skip multi-stage optimization for faster builds
+      target: runtime
+    # Enable hot reload by mounting source code
+    volumes:
+      - ./agent:/app
+    # Use --reload for automatic code reloading
+    command: uvicorn server:app --reload --host 0.0.0.0 --port 8000
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:3b}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - AGENT_API_KEY=${AGENT_API_KEY}
+      - PORT=8000
+      - LOG_LEVEL=debug
+
+  # Use quick tunnel in development (auto-generated URL)
+  cloudflared:
+    command: tunnel --url http://agent:8000
+    volumes: [] # Remove credential volumes - not needed for quick tunnel

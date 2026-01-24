@@ -1,0 +1,15 @@
+# Cloudflare Tunnel Configuration Template
+# 
+# Setup Instructions:
+# 1. Create tunnel: cloudflared tunnel create accomps-agent
+# 2. Copy credentials: cp ~/.cloudflared/<tunnel-id>.json ./cloudflared/credentials.json
+# 3. Copy this file: cp config.yml.example config.yml
+# 4. Replace <TUNNEL-ID> below with your actual tunnel ID
+# 5. Optionally replace <TUNNEL-NAME> with your tunnel name (default: accomps-agent)
+
+tunnel: <TUNNEL-ID>
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # Route all traffic to the agent service
+  - service: http://agent:8000

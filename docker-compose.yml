@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  # Ollama service for running the LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: accomps-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "ollama list | grep llama3.2:3b || ollama pull llama3.2:3b",
+        ]
+      interval: 30s
+      timeout: 300s
+      retries: 10
+      start_period: 60s
+    networks:
+      - accomps-network
+
+  # Python FastAPI agent for parsing accomplishments
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: accomps-agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:3b}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - AGENT_API_KEY=${AGENT_API_KEY}
+      - PORT=8000
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - accomps-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Cloudflare Tunnel for exposing agent to Vercel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: accomps-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --config /etc/cloudflared/config.yml
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      agent:
+        condition: service_healthy
+    networks:
+      - accomps-network
+
+volumes:
+  ollama-models:
+    driver: local
+
+networks:
+  accomps-network:
+    driver: bridge
