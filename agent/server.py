@@ -27,12 +27,15 @@ class AccomplishmentParsed(BaseModel):
 # --- LLM Setup ---
 
 ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 print(f"Initializing Agent Server with model: {ollama_model}")
+print(f"Ollama base URL: {ollama_base_url}")
 
 llm = ChatOllama(
     model=ollama_model,
     temperature=0,
     format="json",  # Force JSON mode for reliable parsing
+    base_url=ollama_base_url,
 )
 
 parser = JsonOutputParser(pydantic_object=AccomplishmentParsed)
