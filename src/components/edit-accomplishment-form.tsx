@@ -51,14 +51,14 @@ export function EditAccomplishmentForm({
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(accomplishment.title);
   const [description, setDescription] = useState(
-    accomplishment.description || ""
+    accomplishment.description || "",
   );
   const [category, setCategory] = useState(accomplishment.category.name);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(
-    accomplishment.category.id
+    accomplishment.category.id,
   );
 
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -67,7 +67,7 @@ export function EditAccomplishmentForm({
       id: t.tag.id,
       name: t.tag.name,
       color: t.tag.color || "#6B7280",
-    }))
+    })),
   );
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
   const [customTagInput, setCustomTagInput] = useState("");
@@ -153,8 +153,8 @@ export function EditAccomplishmentForm({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-mischka rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-east-bay border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">
             Edit Accomplishment
           </h2>
@@ -181,7 +181,7 @@ export function EditAccomplishmentForm({
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                 placeholder="What did you accomplish?"
                 required
               />
@@ -200,7 +200,7 @@ export function EditAccomplishmentForm({
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                    className="flex-1 px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                     placeholder="New category name"
                     required
                   />
@@ -211,7 +211,7 @@ export function EditAccomplishmentForm({
                       setCategory(accomplishment.category.name);
                       setSelectedCategoryId(accomplishment.category.id);
                     }}
-                    className="px-3 py-2 text-gray-600 hover:text-gray-800"
+                    className="px-3 py-2 text-gray-600 hover:text-gray-800 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -221,7 +221,7 @@ export function EditAccomplishmentForm({
                   <select
                     value={selectedCategoryId}
                     onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
+                    className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
                     required
                   >
                     <option value="">Select a category</option>
@@ -250,7 +250,7 @@ export function EditAccomplishmentForm({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700"
+              className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700"
               placeholder="Add more details (optional)"
             />
           </div>
@@ -274,7 +274,7 @@ export function EditAccomplishmentForm({
                       onClick={() => handleTagRemove(tag.id)}
                       className="ml-1 hover:bg-white/20 rounded-full p-0.5"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3 cursor-pointer" />
                     </button>
                   </span>
                 ))}
@@ -326,7 +326,7 @@ export function EditAccomplishmentForm({
                     }
                     e.target.value = "";
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
+                  className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
                 >
                   <option value="">Add a tag...</option>
                   {availableTags
