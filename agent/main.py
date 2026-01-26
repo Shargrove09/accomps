@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment
 from langgraph.checkpoint.memory import InMemorySaver
@@ -82,14 +82,18 @@ def main():
 
     print("Initializing LangChain agent...")
 
-    # Check for Ollama model configuration
-    ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-    print(f"Using Ollama model: {ollama_model}")
+    # Check for LLM configuration
+    llm_model = os.getenv("LLM_MODEL", "llama3.2")
+    llm_base_url = os.getenv("LLM_BASE_URL", "http://localhost:8081/v1")
+    print(f"Using LLM model: {llm_model}")
+    print(f"LLM base URL: {llm_base_url}")
 
     # Initialize the LLM
-    llm = ChatOllama(
-        model=ollama_model,
+    llm = ChatOpenAI(
+        model=llm_model,
         temperature=0,
+        base_url=llm_base_url,
+        api_key="not-needed",  # llama.cpp doesn't require API key
     )
 
     # Define the tools

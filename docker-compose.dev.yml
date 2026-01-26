@@ -16,8 +16,8 @@ services:
     # Use --reload for automatic code reloading
     command: uvicorn server:app --reload --host 0.0.0.0 --port 8000
     environment:
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:3b}
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_MODEL=${LLM_MODEL:-llama3.2}
+      - LLM_BASE_URL=http://host.docker.internal:8081/v1
       - AGENT_API_KEY=${AGENT_API_KEY}
       - PORT=8000
       - LOG_LEVEL=debug

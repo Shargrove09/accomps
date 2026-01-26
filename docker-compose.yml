@@ -1,27 +1,32 @@
 version: "3.8"
 
 services:
-  # Ollama service for running the LLM
-  ollama:
-    image: ollama/ollama:latest
-    container_name: accomps-ollama
+  # llama.cpp service for running the LLM
+  llamacpp:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: accomps-llamacpp
     restart: unless-stopped
     ports:
-      - "11434:11434"
+      - "8081:8081"
     volumes:
-      - ollama-models:/root/.ollama
+      - ${LLM_MODELS_PATH:-./models}:/models:ro
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8081"
+      - "-m"
+      - "/models/${LLM_MODEL_FILE:-qwen2.5-1.5b-instruct-q4_k_m.gguf}"
+      - "-c"
+      - "${LLM_CONTEXT_SIZE:-4096}"
+      - "--n-gpu-layers"
+      - "${LLM_GPU_LAYERS:-99}"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "sh",
-          "-c",
-          "ollama list | grep llama3.2:3b || ollama pull llama3.2:3b",
-        ]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 30s
-      timeout: 300s
-      retries: 10
-      start_period: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - accomps-network
 
@@ -35,12 +40,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:3b}
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_MODEL=${LLM_MODEL:-llama3.2}
+      - LLM_BASE_URL=http://llamacpp:8081/v1
       - AGENT_API_KEY=${AGENT_API_KEY}
       - PORT=8000
     depends_on:
-      ollama:
+      llamacpp:
         condition: service_healthy
     networks:
       - accomps-network
@@ -64,10 +69,6 @@ services:
         condition: service_healthy
     networks:
       - accomps-network
-
-volumes:
-  ollama-models:
-    driver: local
 
 networks:
   accomps-network:

@@ -3,7 +3,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
@@ -29,16 +29,16 @@ class AccomplishmentParsed(BaseModel):
 
 # --- LLM Setup ---
 
-ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-print(f"Initializing Agent Server with model: {ollama_model}")
-print(f"Ollama base URL: {ollama_base_url}")
+llm_model = os.getenv("LLM_MODEL", "llama3.2")
+llm_base_url = os.getenv("LLM_BASE_URL", "http://localhost:8081/v1")
+print(f"Initializing Agent Server with model: {llm_model}")
+print(f"LLM base URL: {llm_base_url}")
 
-llm = ChatOllama(
-    model=ollama_model,
+llm = ChatOpenAI(
+    model=llm_model,
     temperature=0,
-    format="json",  # Force JSON mode for reliable parsing
-    base_url=ollama_base_url,
+    base_url=llm_base_url,
+    api_key="not-needed",  # llama.cpp doesn't require API key
 )
 
 parser = JsonOutputParser(pydantic_object=AccomplishmentParsed)
@@ -48,6 +48,8 @@ prompt = ChatPromptTemplate.from_messages([
     (
         "system",
         """You are a helpful assistant that extracts structured data from accomplishment-focused messages.
+
+You MUST respond with valid JSON only. Do not include any text before or after the JSON object.
 
     Your response MUST be valid JSON that matches the provided schema. Populate:
     - title: concise accomplishment summary (string, required)
