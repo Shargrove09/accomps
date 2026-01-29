@@ -17,6 +17,7 @@ COPY uv.lock ./
 RUN uv pip install --system --no-cache \
     langchain>=1.0.5 \
     langchain-ollama>=1.0.0 \
+    langchain-openai>=0.2.0 \
     langgraph>=1.0.3 \
     python-dotenv>=1.2.1 \
     requests>=2.32.5 \

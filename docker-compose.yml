@@ -3,7 +3,7 @@ version: "3.8"
 services:
   # llama.cpp service for running the LLM
   llamacpp:
-    image: ghcr.io/ggerganov/llama.cpp:server
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
     container_name: accomps-llamacpp
     restart: unless-stopped
     ports:
