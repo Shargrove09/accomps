@@ -3,7 +3,7 @@ import {
   Category,
   Tag,
   AccomplishmentTag,
-} from "@prisma/client";
+} from "@/generated/prisma/client";
 
 export type AccomplishmentWithDetails = Accomplishment & {
   category: Category;
