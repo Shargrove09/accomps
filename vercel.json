@@ -1,5 +1,4 @@
 {
-  "$comment": "Cron schedule: 0 1 * * * = 1am UTC = 8pm EST (previous day)",
   "crons": [
     {
       "path": "/api/cron/reminder",
