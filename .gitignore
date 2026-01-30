@@ -36,8 +36,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# cloudflare tunnel credentials (DO NOT COMMIT)
+cloudflared/*.json
+!cloudflared/config.yml.example
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 /src/generated/prisma
+
+# LLM models (large binary files)
+models/

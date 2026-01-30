@@ -3,7 +3,7 @@ import {
   Category,
   Tag,
   AccomplishmentTag,
-} from "@prisma/client";
+} from "@/generated/prisma/client";
 
 export type AccomplishmentWithDetails = Accomplishment & {
   category: Category;
@@ -36,4 +36,9 @@ export type ParsedAccomplishment = {
   description?: string;
   category?: string;
   tags: string[];
+  confidence?: number;
+  status?: string;
+  reasoning?: string;
+  raw_input?: string;
+  source?: string;
 };
