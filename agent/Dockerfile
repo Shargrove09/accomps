@@ -44,6 +44,9 @@ COPY server.py .
 COPY tool.py .
 COPY tool_helpers.py .
 COPY main.py .
+COPY cache.py .
+COPY parser_chain.py .
+COPY schemas.py .
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
