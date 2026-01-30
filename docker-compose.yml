@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  # llama.cpp service for running the LLM
+  llamacpp:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    container_name: accomps-llamacpp
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - ${LLM_MODELS_PATH:-./models}:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8081"
+      - "-m"
+      - "/models/${LLM_MODEL_FILE:-qwen2.5-1.5b-instruct-q4_k_m.gguf}"
+      - "-c"
+      - "${LLM_CONTEXT_SIZE:-8192}"
+      - "--n-gpu-layers"
+      - "${LLM_GPU_LAYERS:-99}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - accomps-network
+
+  # Python FastAPI agent for parsing accomplishments
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: accomps-agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-llama3.2}
+      - LLM_BASE_URL=http://llamacpp:8081/v1
+      - AGENT_API_KEY=${AGENT_API_KEY}
+      - PORT=8000
+    depends_on:
+      llamacpp:
+        condition: service_healthy
+    networks:
+      - accomps-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Cloudflare Tunnel for exposing agent to Vercel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: accomps-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --config /etc/cloudflared/config.yml
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      agent:
+        condition: service_healthy
+    networks:
+      - accomps-network
+
+networks:
+  accomps-network:
+    driver: bridge

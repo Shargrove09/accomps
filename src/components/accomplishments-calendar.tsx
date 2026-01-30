@@ -4,7 +4,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
-import { Accomplishment } from "@prisma/client";
+import { Accomplishment } from "@/generated/prisma/client";
 import { useState } from "react";
 
 const locales = {
