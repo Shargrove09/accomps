@@ -30,6 +30,13 @@ export type TagOption = {
   color: string | null;
 };
 
+/** Tag with a guaranteed (non-null) color, used in form components. */
+export type FormTag = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 /** Accomplishment shape as passed to client components (serialisable). */
 export type AccomplishmentItem = {
   id: string;

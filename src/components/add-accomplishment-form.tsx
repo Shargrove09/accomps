@@ -9,14 +9,7 @@ import {
 } from "@/lib/actions";
 import { Plus, ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";
-import type { CategoryOption } from "@/lib/types";
-
-/** Tag with a guaranteed (non-null) color for form display. */
-type FormTag = {
-  id: string;
-  name: string;
-  color: string;
-};
+import type { CategoryOption, FormTag } from "@/lib/types";
 
 export function AddAccomplishmentForm() {
   const router = useRouter();
