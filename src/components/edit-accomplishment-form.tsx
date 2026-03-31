@@ -7,36 +7,13 @@ import {
   getExistingTags,
 } from "@/lib/actions";
 import { X, ChevronDown } from "lucide-react";
+import type { AccomplishmentItem, CategoryOption } from "@/lib/types";
 
-type Category = {
+/** Tag with a guaranteed (non-null) color for form display. */
+type FormTag = {
   id: string;
   name: string;
   color: string;
-};
-
-type Tag = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type Accomplishment = {
-  id: string;
-  title: string;
-  description: string | null;
-  date: Date;
-  category: {
-    id: string;
-    name: string;
-    color: string | null;
-  };
-  tags: {
-    tag: {
-      id: string;
-      name: string;
-      color: string | null;
-    };
-  }[];
 };
 
 export function EditAccomplishmentForm({
@@ -44,9 +21,9 @@ export function EditAccomplishmentForm({
   onClose,
   onSuccess,
 }: {
-  accomplishment: Accomplishment;
+  accomplishment: AccomplishmentItem;
   onClose: () => void;
-  onSuccess?: (updatedAccomplishment: Accomplishment) => void;
+  onSuccess?: (updatedAccomplishment: AccomplishmentItem) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(accomplishment.title);
@@ -55,14 +32,14 @@ export function EditAccomplishmentForm({
   );
   const [category, setCategory] = useState(accomplishment.category.name);
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(
     accomplishment.category.id,
   );
 
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>(
+  const [availableTags, setAvailableTags] = useState<FormTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<FormTag[]>(
     accomplishment.tags.map((t) => ({
       id: t.tag.id,
       name: t.tag.name,
@@ -117,7 +94,7 @@ export function EditAccomplishmentForm({
 
   const handleCustomTagAdd = () => {
     if (customTagInput.trim()) {
-      const newTag: Tag = {
+      const newTag: FormTag = {
         id: `custom-${Date.now()}`,
         name: customTagInput.trim(),
         color: "#6B7280",

@@ -9,14 +9,10 @@ import {
 } from "@/lib/actions";
 import { Plus, ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";
+import type { CategoryOption } from "@/lib/types";
 
-type Category = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-type Tag = {
+/** Tag with a guaranteed (non-null) color for form display. */
+type FormTag = {
   id: string;
   name: string;
   color: string;
@@ -30,13 +26,13 @@ export function AddAccomplishmentForm() {
   const [category, setCategory] = useState("");
 
   // New state for category management
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   // New state for tag management
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<FormTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<FormTag[]>([]);
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
   const [customTagInput, setCustomTagInput] = useState("");
 
@@ -88,7 +84,7 @@ export function AddAccomplishmentForm() {
 
   const handleCustomTagAdd = () => {
     if (customTagInput.trim()) {
-      const newTag: Tag = {
+      const newTag: FormTag = {
         id: `custom-${Date.now()}`, // Temporary ID for new tags
         name: customTagInput.trim(),
         color: "#6B7280",
