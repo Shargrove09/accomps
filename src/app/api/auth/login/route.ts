@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import {
+  validateAuthConfig,
+  validatePassword,
+  getSessionSecret,
+  AUTH_COOKIE_NAME,
+  AUTH_COOKIE_OPTIONS,
+} from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -14,18 +21,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if AUTH_PASSWORD environment variable is set
-    if (!process.env.AUTH_PASSWORD) {
-      console.error("AUTH_PASSWORD environment variable is not set");
-      return NextResponse.json(
-        { error: "Authentication is not configured" },
-        { status: 500 }
+    // Check that required env vars are configured
+    const config = validateAuthConfig();
+    if (!config.isValid) {
+      console.error(
+        "Missing auth environment variables:",
+        config.missingVars.join(", ")
       );
-    }
-
-    // Check if AUTH_SESSION_SECRET environment variable is set
-    if (!process.env.AUTH_SESSION_SECRET) {
-      console.error("AUTH_SESSION_SECRET environment variable is not set");
       return NextResponse.json(
         { error: "Authentication is not configured" },
         { status: 500 }
@@ -33,19 +35,13 @@ export async function POST(request: Request) {
     }
 
     // Validate password against environment variable
-    if (password !== process.env.AUTH_PASSWORD) {
+    if (!validatePassword(password)) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 
     // Password is correct, set the authentication cookie
     const cookieStore = await cookies();
-    cookieStore.set("auth-session", process.env.AUTH_SESSION_SECRET, {
-      httpOnly: true, // Prevents JavaScript access
-      secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      sameSite: "lax", // CSRF protection
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/", // Cookie available across entire site
-    });
+    cookieStore.set(AUTH_COOKIE_NAME, getSessionSecret()!, AUTH_COOKIE_OPTIONS);
 
     return NextResponse.json(
       { success: true, message: "Login successful" },
