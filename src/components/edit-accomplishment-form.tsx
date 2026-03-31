@@ -7,14 +7,7 @@ import {
   getExistingTags,
 } from "@/lib/actions";
 import { X, ChevronDown } from "lucide-react";
-import type { AccomplishmentItem, CategoryOption } from "@/lib/types";
-
-/** Tag with a guaranteed (non-null) color for form display. */
-type FormTag = {
-  id: string;
-  name: string;
-  color: string;
-};
+import type { AccomplishmentItem, CategoryOption, FormTag } from "@/lib/types";
 
 export function EditAccomplishmentForm({
   accomplishment,

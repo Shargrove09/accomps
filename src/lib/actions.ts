@@ -72,10 +72,10 @@ function validateAccomplishmentInput(input: {
   category: string;
   tags: string[];
 }): string | null {
-  if (!input.title.trim()) return "Title is required";
+  if (!input.title || !input.title.trim()) return "Title is required";
   if (input.title.length > MAX_TITLE_LENGTH)
     return `Title must be ${MAX_TITLE_LENGTH} characters or less`;
-  if (!input.category.trim()) return "Category is required";
+  if (!input.category || !input.category.trim()) return "Category is required";
   if (input.category.length > MAX_NAME_LENGTH)
     return `Category name must be ${MAX_NAME_LENGTH} characters or less`;
   if (input.description && input.description.length > MAX_DESCRIPTION_LENGTH)
@@ -83,7 +83,7 @@ function validateAccomplishmentInput(input: {
   if (input.tags.length > MAX_TAGS)
     return `At most ${MAX_TAGS} tags allowed`;
   for (const tag of input.tags) {
-    if (!tag.trim()) return "Tag names cannot be empty";
+    if (!tag || !tag.trim()) return "Tag names cannot be empty";
     if (tag.length > MAX_NAME_LENGTH)
       return `Tag name must be ${MAX_NAME_LENGTH} characters or less`;
   }
