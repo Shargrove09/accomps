@@ -4,6 +4,94 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { PendingStatus } from "@/generated/prisma/client";
 
+// ── Shared helpers ──────────────────────────────────────────────────────────
+
+const RANDOM_COLORS = [
+  "#3B82F6", // blue
+  "#10B981", // emerald
+  "#8B5CF6", // violet
+  "#F59E0B", // amber
+  "#EF4444", // red
+  "#06B6D4", // cyan
+  "#84CC16", // lime
+  "#F97316", // orange
+];
+
+function getRandomColor() {
+  return RANDOM_COLORS[Math.floor(Math.random() * RANDOM_COLORS.length)];
+}
+
+/** Find an existing category by name, or create one with a random color. */
+async function findOrCreateCategory(name: string) {
+  const existing = await db.category.findUnique({ where: { name } });
+  if (existing) return existing;
+
+  return db.category.create({
+    data: { name, color: getRandomColor() },
+  });
+}
+
+/** Find an existing tag by name, or create one with a random color. */
+async function findOrCreateTag(name: string) {
+  const existing = await db.tag.findUnique({ where: { name } });
+  if (existing) return existing;
+
+  return db.tag.create({
+    data: { name, color: getRandomColor() },
+  });
+}
+
+/** Create AccomplishmentTag links for a set of tag names. */
+async function linkTagsToAccomplishment(
+  accomplishmentId: string,
+  tagNames: string[],
+) {
+  for (const tagName of tagNames) {
+    const tag = await findOrCreateTag(tagName);
+    await db.accomplishmentTag.create({
+      data: { accomplishmentId, tagId: tag.id },
+    });
+  }
+}
+
+/** Standard include clause for accomplishments with all relationships. */
+const accomplishmentInclude = {
+  category: true,
+  tags: { include: { tag: true } },
+} as const;
+
+const MAX_TITLE_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_NAME_LENGTH = 100;
+const MAX_TAGS = 20;
+
+/** Validates string inputs for accomplishment creation/update. */
+function validateAccomplishmentInput(input: {
+  title: string;
+  description?: string;
+  category: string;
+  tags: string[];
+}): string | null {
+  if (!input.title || !input.title.trim()) return "Title is required";
+  if (input.title.length > MAX_TITLE_LENGTH)
+    return `Title must be ${MAX_TITLE_LENGTH} characters or less`;
+  if (!input.category || !input.category.trim()) return "Category is required";
+  if (input.category.length > MAX_NAME_LENGTH)
+    return `Category name must be ${MAX_NAME_LENGTH} characters or less`;
+  if (input.description && input.description.length > MAX_DESCRIPTION_LENGTH)
+    return `Description must be ${MAX_DESCRIPTION_LENGTH} characters or less`;
+  if (input.tags.length > MAX_TAGS)
+    return `At most ${MAX_TAGS} tags allowed`;
+  for (const tag of input.tags) {
+    if (!tag || !tag.trim()) return "Tag names cannot be empty";
+    if (tag.length > MAX_NAME_LENGTH)
+      return `Tag name must be ${MAX_NAME_LENGTH} characters or less`;
+  }
+  return null;
+}
+
+// ── Server Actions ──────────────────────────────────────────────────────────
+
 export async function addAccomplishment({
   title,
   description,
@@ -15,22 +103,19 @@ export async function addAccomplishment({
   category: string;
   tags: string[];
 }) {
+  const validationError = validateAccomplishmentInput({
+    title,
+    description,
+    category,
+    tags,
+  });
+  if (validationError) {
+    return { success: false, error: validationError };
+  }
+
   try {
-    // Find or create category
-    let categoryRecord = await db.category.findUnique({
-      where: { name: category },
-    });
+    const categoryRecord = await findOrCreateCategory(category);
 
-    if (!categoryRecord) {
-      categoryRecord = await db.category.create({
-        data: {
-          name: category,
-          color: getRandomColor(),
-        },
-      });
-    }
-
-    // Create accomplishment
     const accomplishment = await db.accomplishment.create({
       data: {
         title,
@@ -40,29 +125,8 @@ export async function addAccomplishment({
       },
     });
 
-    // Handle tags
     if (tags.length > 0) {
-      for (const tagName of tags) {
-        let tag = await db.tag.findUnique({
-          where: { name: tagName },
-        });
-
-        if (!tag) {
-          tag = await db.tag.create({
-            data: {
-              name: tagName,
-              color: getRandomColor(),
-            },
-          });
-        }
-
-        await db.accomplishmentTag.create({
-          data: {
-            accomplishmentId: accomplishment.id,
-            tagId: tag.id,
-          },
-        });
-      }
+      await linkTagsToAccomplishment(accomplishment.id, tags);
     }
 
     revalidatePath("/");
@@ -71,20 +135,6 @@ export async function addAccomplishment({
     console.error("Error adding accomplishment:", error);
     return { success: false, error: "Failed to add accomplishment" };
   }
-}
-
-function getRandomColor() {
-  const colors = [
-    "#3B82F6", // blue
-    "#10B981", // emerald
-    "#8B5CF6", // violet
-    "#F59E0B", // amber
-    "#EF4444", // red
-    "#06B6D4", // cyan
-    "#84CC16", // lime
-    "#F97316", // orange
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 export async function getCategories() {
@@ -142,14 +192,7 @@ export async function getAccomplishment(id: string) {
   try {
     const accomplishment = await db.accomplishment.findUnique({
       where: { id },
-      include: {
-        category: true,
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
+      include: accomplishmentInclude,
     });
     return accomplishment;
   } catch (error) {
@@ -173,20 +216,18 @@ export async function updateAccomplishment({
   tags: string[];
   date?: Date;
 }) {
-  try {
-    // Find or create category
-    let categoryRecord = await db.category.findUnique({
-      where: { name: category },
-    });
+  const validationError = validateAccomplishmentInput({
+    title,
+    description,
+    category,
+    tags,
+  });
+  if (validationError) {
+    return { success: false, error: validationError };
+  }
 
-    if (!categoryRecord) {
-      categoryRecord = await db.category.create({
-        data: {
-          name: category,
-          color: getRandomColor(),
-        },
-      });
-    }
+  try {
+    const categoryRecord = await findOrCreateCategory(category);
 
     // Update accomplishment
     await db.accomplishment.update({
@@ -199,34 +240,13 @@ export async function updateAccomplishment({
       },
     });
 
-    // Delete existing tags
+    // Replace tag associations: delete existing, then create new
     await db.accomplishmentTag.deleteMany({
       where: { accomplishmentId: id },
     });
 
-    // Add new tags
     if (tags.length > 0) {
-      for (const tagName of tags) {
-        let tag = await db.tag.findUnique({
-          where: { name: tagName },
-        });
-
-        if (!tag) {
-          tag = await db.tag.create({
-            data: {
-              name: tagName,
-              color: getRandomColor(),
-            },
-          });
-        }
-
-        await db.accomplishmentTag.create({
-          data: {
-            accomplishmentId: id,
-            tagId: tag.id,
-          },
-        });
-      }
+      await linkTagsToAccomplishment(id, tags);
     }
 
     revalidatePath("/");
@@ -235,14 +255,7 @@ export async function updateAccomplishment({
 
     const updatedAccomplishment = await db.accomplishment.findUnique({
       where: { id },
-      include: {
-        category: true,
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
+      include: accomplishmentInclude,
     });
 
     return { success: true, data: updatedAccomplishment };
@@ -275,22 +288,16 @@ export async function deleteAccomplishment(id: string) {
 }
 
 export async function getAccomplishmentsByTag(tag: string) {
-  // Direct database query via Prisma
-  return await db.accomplishment.findMany({
-    where: { tags: { some: { tag: { name: tag } } } },
-
-    include: {
-      category: true,
-      tags: {
-        include: {
-          tag: true,
-        },
-      },
-    },
-    orderBy: {
-      date: "desc",
-    },
-  });
+  try {
+    return await db.accomplishment.findMany({
+      where: { tags: { some: { tag: { name: tag } } } },
+      include: accomplishmentInclude,
+      orderBy: { date: "desc" },
+    });
+  } catch (error) {
+    console.error("Error fetching accomplishments by tag:", error);
+    return [];
+  }
 }
 
 export async function createPendingAccomplishment({

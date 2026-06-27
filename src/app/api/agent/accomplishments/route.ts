@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import { addAccomplishment } from "@/lib/actions";
 import { db } from "@/lib/db";
+import { validateAgentApiKey } from "@/lib/api-auth";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const apiKey = request.headers.get("x-api-key");
-
-  // Simple API Key authentication
-  if (apiKey !== process.env.AGENT_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateAgentApiKey(request);
+  if (authError) return authError;
 
   try {
     const body = await request.json();
@@ -52,10 +49,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const apiKey = request.headers.get("x-api-key");
-  if (apiKey !== process.env.AGENT_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateAgentApiKey(request);
+  if (authError) return authError;
 
   try {
     const { searchParams } = new URL(request.url);
