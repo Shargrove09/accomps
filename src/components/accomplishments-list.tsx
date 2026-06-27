@@ -8,53 +8,23 @@ import { EditAccomplishmentForm } from "./edit-accomplishment-form";
 import { ConfirmDialog } from "./confirm-dialog";
 import { deleteAccomplishment, getAccomplishment } from "@/lib/actions";
 import { useDebounce } from "@/lib/hooks";
-
-type Accomplishment = {
-  id: string;
-  title: string;
-  description: string | null;
-  date: Date;
-  category: {
-    id: string;
-    name: string;
-    color: string | null;
-  };
-  tags: {
-    tag: {
-      id: string;
-      name: string;
-      color: string | null;
-    };
-  }[];
-};
-
-type Category = {
-  id: string;
-  name: string;
-  color: string | null;
-};
-
-type Tag = {
-  id: string;
-  name: string;
-  color: string | null;
-};
+import type { AccomplishmentItem, CategoryOption, TagOption } from "@/lib/types";
 
 export function AccomplishmentsList({
   initialAccomplishments,
   categories,
   tags,
 }: {
-  initialAccomplishments: Accomplishment[];
-  categories: Category[];
-  tags: Tag[];
+  initialAccomplishments: AccomplishmentItem[];
+  categories: CategoryOption[];
+  tags: TagOption[];
 }) {
   const router = useRouter();
   const [accomplishments, setAccomplishments] = useState(
     initialAccomplishments
   );
   const [editingAccomplishment, setEditingAccomplishment] =
-    useState<Accomplishment | null>(null);
+    useState<AccomplishmentItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -139,7 +109,7 @@ export function AccomplishmentsList({
     }
   };
 
-  const handleEditSuccess = (updatedAccomplishment: Accomplishment) => {
+  const handleEditSuccess = (updatedAccomplishment: AccomplishmentItem) => {
     setAccomplishments((prev) =>
       prev.map((a) =>
         a.id === updatedAccomplishment.id ? updatedAccomplishment : a
