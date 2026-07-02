@@ -410,7 +410,7 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
         return "No fields to update were provided."
 
     try:
-        response = requests.patch(f"{api_url}/accomplishments/{accomplishment_id}", json=payload, headers=headers)
+        response = requests.patch(f"{api_url}/{accomplishment_id}", json=payload, headers=headers)
         response.raise_for_status()
         return f"Accomplishment with ID {accomplishment_id} updated successfully."
     except requests.exceptions.HTTPError as http_err:
