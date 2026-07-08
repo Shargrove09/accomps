@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { addAccomplishment } from "@/lib/actions";
 import { db } from "@/lib/db";
 import { validateAgentApiKey } from "@/lib/api-auth";
+import { jsonError } from "@/lib/api-response";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -15,12 +16,9 @@ export async function POST(request: Request) {
     const { title, description, category, tags } = body;
 
     if (!title || !category || !Array.isArray(tags)) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing required fields: title, category, and tags (as an array)",
-        },
-        { status: 400 }
+      return jsonError(
+        "Missing required fields: title, category, and tags (as an array)",
+        400
       );
     }
 
@@ -31,20 +29,19 @@ export async function POST(request: Request) {
       tags,
     });
 
-    console.log("--- Accomplishment added ---:", result);
+    // addAccomplishment returns { success: false, error } on validation/DB
+    // failure — surface that as a 400 instead of a misleading 200.
+    if (!result.success) {
+      return jsonError(result.error ?? "Failed to add accomplishment", 400);
+    }
 
     return NextResponse.json({
-      message: "Accomplishment added successfully\n",
+      message: "Accomplishment added successfully",
       accomplishmentId: result.id,
     });
   } catch (error) {
     console.error("API Error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { error: "Failed to add accomplishment", details: errorMessage },
-      { status: 500 }
-    );
+    return jsonError("Failed to add accomplishment", 500, error);
   }
 }
 
@@ -58,12 +55,17 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    // Accept either `search` or `q` for a case-insensitive title match.
+    const search = searchParams.get("search") || searchParams.get("q");
 
     // Calculate skip for pagination
     const skip = (page - 1) * pageSize;
 
-    // Build the where clause for date filtering
-    const whereClause: { date?: { gte?: Date; lte?: Date } } = {};
+    // Build the where clause for date + title filtering
+    const whereClause: {
+      date?: { gte?: Date; lte?: Date };
+      title?: { contains: string; mode: "insensitive" };
+    } = {};
     if (startDate || endDate) {
       whereClause.date = {};
       if (startDate) {
@@ -72,6 +74,9 @@ export async function GET(request: Request) {
       if (endDate) {
         whereClause.date.lte = new Date(endDate);
       }
+    }
+    if (search && search.trim()) {
+      whereClause.title = { contains: search.trim(), mode: "insensitive" };
     }
 
     const accomplishments = await db.accomplishment.findMany({
@@ -108,11 +113,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("API Error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { error: "Failed to fetch accomplishments", details: errorMessage },
-      { status: 500 }
-    );
+    return jsonError("Failed to fetch accomplishments", 500, error);
   }
 }

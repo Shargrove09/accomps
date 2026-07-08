@@ -14,8 +14,10 @@ def add_accomplishment(title: str, category: str, tags: str, description: str = 
         title (str): The title of the accomplishment. Must be a clear, concise summary, corrected for typos and grammar.
         category (str): The category for the accomplishment (e.g., 'Work', 'Learning', 'Personal').
         tags (str): Comma-separated tags to associate with the accomplishment (e.g., 'release,deployment').
-        description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar. Defaults to "".
-    
+        description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar.
+            If the user did not provide a description, generate a concise one-sentence description
+            in natural language from the title and context before calling this tool — do not leave it blank.
+
     Returns:
         str: A message indicating success or failure of the operation.
     """
@@ -55,6 +57,14 @@ def add_accomplishment(title: str, category: str, tags: str, description: str = 
         return f"Successfully added accomplishment: '{normalized['title']}'. Response: {response_data.get('message')}"
 
     except requests.exceptions.HTTPError as http_err:
+        # Surface the server's JSON error message (e.g. validation failures return
+        # {"error": "..."} with a 400) instead of a raw stack/status.
+        try:
+            server_error = response.json().get("error")
+        except Exception:
+            server_error = None
+        if server_error:
+            return f"Error ({response.status_code}): {server_error}"
         return f"HTTP error occurred: {http_err}. Response: {response.text}"
     except requests.exceptions.RequestException as req_err:
         return f"An error occurred with the request: {req_err}"
@@ -144,6 +154,7 @@ def list_accomplishments(pageSize: int = 5, page: int = 1) -> str:
             
             # Build the accomplishment entry
             result += f"{idx}. {acc['title']}\n"
+            result += f"   🆔 ID: {acc['id']}\n"
             result += f"   📁 Category: {acc['category']['name']}\n"
             result += f"   🏷️  Tags: {tags_str}\n"
             result += f"   📅 Date: {formatted_date}\n"
@@ -302,6 +313,7 @@ def list_accomplishments_by_date(start_date: str = "", end_date: str = "", timef
             
             # Build the accomplishment entry
             result += f"{idx}. {acc['title']}\n"
+            result += f"   🆔 ID: {acc['id']}\n"
             result += f"   📁 Category: {acc['category']['name']}\n"
             result += f"   🏷️  Tags: {tags_str}\n"
             result += f"   📅 Date: {formatted_date}\n"
@@ -330,6 +342,97 @@ def list_accomplishments_by_date(start_date: str = "", end_date: str = "", timef
         return f"Network error occurred: {req_err}"
     except Exception as e:
         return f"Unexpected error occurred while listing accomplishments: {e}"
+
+@tool
+def search_accomplishments(query: str = "", start_date: str = "", end_date: str = "") -> str:
+    """Searches accomplishments by title text and/or date range, returning their IDs.
+
+    Use this tool when the user refers to a specific accomplishment (e.g. "the one
+    about the auth deploy") and you need its ID before updating it with
+    update_accomplishment. The returned entries include an "ID:" line.
+
+    Args:
+        query (str): Case-insensitive text to match against accomplishment titles
+            (e.g. "authentication"). Optional.
+        start_date (str): Start date in YYYY-MM-DD format. Optional.
+        end_date (str): End date in YYYY-MM-DD format. Optional.
+
+    Returns:
+        str: A formatted list of matching accomplishments, each including its ID,
+            or a message if none match.
+
+    Examples:
+        - search_accomplishments(query="react hooks") -> matches by title
+        - search_accomplishments(query="deploy", start_date="2025-11-01") -> title + date
+    """
+    from datetime import datetime
+
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured. Please check your .env file."
+
+    if not query and not start_date and not end_date:
+        return "Error: Provide at least a 'query' or a date range to search."
+
+    headers = {
+        "x-api-key": api_key,
+    }
+
+    params = {"pageSize": 20}
+    if query:
+        params["search"] = query
+    if start_date:
+        params["startDate"] = start_date
+    if end_date:
+        params["endDate"] = end_date
+
+    try:
+        response = requests.get(api_url, headers=headers, params=params)
+        response.raise_for_status()
+
+        response_data = response.json()
+        accomplishments = response_data.get('accomplishments', [])
+
+        if not accomplishments:
+            return f"No accomplishments found matching your search."
+
+        result = f"🔎 Found {len(accomplishments)} matching accomplishment(s):\n"
+        result += "=" * 60 + "\n\n"
+
+        for idx, acc in enumerate(accomplishments, 1):
+            try:
+                date_obj = datetime.fromisoformat(acc['date'].replace('Z', '+00:00'))
+                formatted_date = date_obj.strftime('%B %d, %Y at %I:%M %p')
+            except:
+                formatted_date = acc['date']
+
+            tags_list = [t['tag']['name'] for t in acc.get('tags', [])]
+            tags_str = ", ".join(tags_list) if tags_list else "No tags"
+
+            result += f"{idx}. {acc['title']}\n"
+            result += f"   🆔 ID: {acc['id']}\n"
+            result += f"   📁 Category: {acc['category']['name']}\n"
+            result += f"   🏷️  Tags: {tags_str}\n"
+            result += f"   📅 Date: {formatted_date}\n\n"
+
+        return result
+
+    except requests.exceptions.HTTPError as http_err:
+        status_code = response.status_code if 'response' in locals() else 'unknown'
+        if status_code == 401:
+            return "Error: Authentication failed. The API key may be invalid."
+        elif status_code == 404:
+            return "Error: The accomplishments API endpoint was not found."
+        else:
+            return f"HTTP error {status_code}: {http_err}. Response: {response.text}"
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to the API. Is the server running?"
+    except requests.exceptions.RequestException as req_err:
+        return f"Network error occurred: {req_err}"
+    except Exception as e:
+        return f"Unexpected error occurred while searching accomplishments: {e}"
 
 @tool
 def list_tags() -> str:

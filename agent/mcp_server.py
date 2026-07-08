@@ -29,7 +29,9 @@ mcp = FastMCP(
 @mcp.tool()
 def add_accomplishment(title: str, category: str, tags: str, description: str = "") -> str:
     """Record a new accomplishment. `tags` is a comma-separated string. Clean up the
-    title/description for typos and grammar before saving."""
+    title/description for typos and grammar before saving. If the user did not provide a
+    description, generate a concise one-sentence description from the title/context —
+    don't leave it blank."""
     return accomps_tools.add_accomplishment.invoke(
         {"title": title, "category": category, "tags": tags, "description": description}
     )
@@ -47,6 +49,16 @@ def list_accomplishments_by_date(start_date: str = "", end_date: str = "", timef
     today | yesterday | week | month | year. Use either dates or a timeframe, not both."""
     return accomps_tools.list_accomplishments_by_date.invoke(
         {"start_date": start_date, "end_date": end_date, "timeframe": timeframe}
+    )
+
+
+@mcp.tool()
+def search_accomplishments(query: str = "", start_date: str = "", end_date: str = "") -> str:
+    """Search accomplishments by title text and/or date range (YYYY-MM-DD). Returns
+    matching entries including their IDs — use this to find an accomplishment's ID
+    before calling update_accomplishment."""
+    return accomps_tools.search_accomplishments.invoke(
+        {"query": query, "start_date": start_date, "end_date": end_date}
     )
 
 

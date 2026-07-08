@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateAgentApiKey } from "@/lib/api-auth";
+import { jsonError } from "@/lib/api-response";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -20,11 +21,6 @@ export async function GET(request: Request) {
     return NextResponse.json(tags);
   } catch (error) {
     console.error("API Error fetching tags:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { error: "Failed to fetch tags", details: errorMessage },
-      { status: 500 }
-    );
+    return jsonError("Failed to fetch tags", 500, error);
   }
 }

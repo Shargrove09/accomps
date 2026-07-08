@@ -47,6 +47,8 @@ export type AccomplishmentItem = {
   tags: {
     tag: TagOption;
   }[];
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 // ── Domain / analytics types ────────────────────────────────────────────────

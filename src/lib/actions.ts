@@ -21,6 +21,16 @@ function getRandomColor() {
   return RANDOM_COLORS[Math.floor(Math.random() * RANDOM_COLORS.length)];
 }
 
+/** True when a Prisma error is a unique-constraint violation (P2002). */
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
+
 /** Find an existing category by name, or create one with a random color. */
 async function findOrCreateCategory(name: string) {
   const existing = await db.category.findUnique({ where: { name } });
@@ -297,6 +307,241 @@ export async function getAccomplishmentsByTag(tag: string) {
   } catch (error) {
     console.error("Error fetching accomplishments by tag:", error);
     return [];
+  }
+}
+
+// ── Category management ──────────────────────────────────────────────────────
+
+export async function getCategoriesWithAccomplishmentCount() {
+  try {
+    return await db.category.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: { accomplishments: true },
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    return [];
+  }
+}
+
+export async function updateCategory({
+  id,
+  name,
+  description,
+  color,
+}: {
+  id: string;
+  name?: string;
+  description?: string | null;
+  color?: string | null;
+}) {
+  if (name !== undefined && !name.trim()) {
+    return { success: false, error: "Category name cannot be empty" };
+  }
+  if (name && name.length > MAX_NAME_LENGTH) {
+    return {
+      success: false,
+      error: `Category name must be ${MAX_NAME_LENGTH} characters or less`,
+    };
+  }
+
+  try {
+    const category = await db.category.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name: name.trim() }),
+        ...(description !== undefined && { description }),
+        ...(color !== undefined && { color }),
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/categories");
+    return { success: true, data: category };
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { success: false, error: "A category with that name already exists" };
+    }
+    console.error("Error updating category:", error);
+    return { success: false, error: "Failed to update category" };
+  }
+}
+
+export async function deleteCategory(id: string) {
+  try {
+    const count = await db.accomplishment.count({ where: { categoryId: id } });
+    if (count > 0) {
+      return {
+        success: false,
+        inUse: true,
+        count,
+        error: `Category is used by ${count} accomplishment${
+          count === 1 ? "" : "s"
+        }. Merge it into another category first.`,
+      };
+    }
+
+    await db.category.delete({ where: { id } });
+
+    revalidatePath("/");
+    revalidatePath("/categories");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    return { success: false, error: "Failed to delete category" };
+  }
+}
+
+/** Reassign all accomplishments from sourceId to targetId, then delete source. */
+export async function mergeCategory({
+  sourceId,
+  targetId,
+}: {
+  sourceId: string;
+  targetId: string;
+}) {
+  if (sourceId === targetId) {
+    return { success: false, error: "Cannot merge a category into itself" };
+  }
+
+  try {
+    const target = await db.category.findUnique({ where: { id: targetId } });
+    if (!target) {
+      return { success: false, error: "Target category not found" };
+    }
+
+    await db.accomplishment.updateMany({
+      where: { categoryId: sourceId },
+      data: { categoryId: targetId },
+    });
+    await db.category.delete({ where: { id: sourceId } });
+
+    revalidatePath("/");
+    revalidatePath("/categories");
+    revalidatePath("/calendar");
+    return { success: true };
+  } catch (error) {
+    console.error("Error merging categories:", error);
+    return { success: false, error: "Failed to merge categories" };
+  }
+}
+
+// ── Tag management ───────────────────────────────────────────────────────────
+
+export async function updateTag({
+  id,
+  name,
+  description,
+  color,
+}: {
+  id: string;
+  name?: string;
+  description?: string | null;
+  color?: string | null;
+}) {
+  if (name !== undefined && !name.trim()) {
+    return { success: false, error: "Tag name cannot be empty" };
+  }
+  if (name && name.length > MAX_NAME_LENGTH) {
+    return {
+      success: false,
+      error: `Tag name must be ${MAX_NAME_LENGTH} characters or less`,
+    };
+  }
+
+  try {
+    const tag = await db.tag.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name: name.trim() }),
+        ...(description !== undefined && { description }),
+        ...(color !== undefined && { color }),
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/tags");
+    return { success: true, data: tag };
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { success: false, error: "A tag with that name already exists" };
+    }
+    console.error("Error updating tag:", error);
+    return { success: false, error: "Failed to update tag" };
+  }
+}
+
+/** Delete a tag. The AccomplishmentTag join rows cascade away automatically,
+ * so accomplishments themselves are never deleted — only their association. */
+export async function deleteTag(id: string) {
+  try {
+    await db.tag.delete({ where: { id } });
+
+    revalidatePath("/");
+    revalidatePath("/tags");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting tag:", error);
+    return { success: false, error: "Failed to delete tag" };
+  }
+}
+
+/** Re-point all AccomplishmentTag rows from sourceId to targetId (deduping
+ * against the (accomplishmentId, tagId) unique constraint), then delete source. */
+export async function mergeTag({
+  sourceId,
+  targetId,
+}: {
+  sourceId: string;
+  targetId: string;
+}) {
+  if (sourceId === targetId) {
+    return { success: false, error: "Cannot merge a tag into itself" };
+  }
+
+  try {
+    const target = await db.tag.findUnique({ where: { id: targetId } });
+    if (!target) {
+      return { success: false, error: "Target tag not found" };
+    }
+
+    const sourceLinks = await db.accomplishmentTag.findMany({
+      where: { tagId: sourceId },
+    });
+
+    for (const link of sourceLinks) {
+      const alreadyTagged = await db.accomplishmentTag.findUnique({
+        where: {
+          accomplishmentId_tagId: {
+            accomplishmentId: link.accomplishmentId,
+            tagId: targetId,
+          },
+        },
+      });
+
+      if (alreadyTagged) {
+        // Accomplishment already carries the target tag — drop the duplicate link.
+        await db.accomplishmentTag.delete({ where: { id: link.id } });
+      } else {
+        await db.accomplishmentTag.update({
+          where: { id: link.id },
+          data: { tagId: targetId },
+        });
+      }
+    }
+
+    await db.tag.delete({ where: { id: sourceId } });
+
+    revalidatePath("/");
+    revalidatePath("/tags");
+    return { success: true };
+  } catch (error) {
+    console.error("Error merging tags:", error);
+    return { success: false, error: "Failed to merge tags" };
   }
 }
 

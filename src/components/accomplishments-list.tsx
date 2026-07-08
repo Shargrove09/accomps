@@ -279,6 +279,18 @@ export function AccomplishmentsList({
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {formatDate(accomplishment.date)}
+                      {new Date(accomplishment.updatedAt).getTime() -
+                        new Date(accomplishment.createdAt).getTime() >
+                        1000 && (
+                        <span
+                          className="text-xs text-steel-gray italic"
+                          title={`Last edited ${new Date(
+                            accomplishment.updatedAt,
+                          ).toLocaleString()}`}
+                        >
+                          · edited
+                        </span>
+                      )}
                     </div>
 
                     {accomplishment.tags.length > 0 && (

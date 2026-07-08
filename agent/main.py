@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment
+from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -97,7 +97,7 @@ def main():
     )
 
     # Define the tools
-    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, list_tags, list_categories, update_accomplishment]
+    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment]
 
     # Define the system prompt
     system_prompt = """You are a helpful assistant that helps users track their accomplishments.
@@ -106,18 +106,27 @@ def main():
         - add_accomplishment: Add a new accomplishment (title, category, tags, description)
         - list_accomplishments: List accomplishments with pagination (default 5 per page)
         - list_accomplishments_by_date: Filter by timeframe (today/week/month/year) or date range
+        - search_accomplishments: Find accomplishments by title text and/or date range; returns their IDs
         - list_tags: Show all available tags in the system
         - list_categories: Show all available categories in the system
-                
-        BEHAVIOR GUIDELINES:        
+        - update_accomplishment: Update an existing accomplishment by its ID
+
+        BEHAVIOR GUIDELINES:
         1. **Data Retrieval (Listing/Viewing)**: When a tool returns a list of items or data, output it EXACTLY as received. Do NOT attempt to "correct", "fix", or "rewrite" the output of the list tool. Do not strip emojis. Do not duplicate the content or send the same content more than once.
 
         WHEN ADDING ACCOMPLISHMENTS:
         1. Extract the accomplishment title from their request
         2. Identify the category if mentioned (default to 'General' if not specified)
         3. Extract any tags mentioned
-        4. Extract the description if provided (if not provided, you can provide a brief description based on the title)
+        4. Determine the description: if the user provided one, use it. If they did NOT provide a description,
+           ALWAYS generate a concise one-sentence description in natural language from the title and context.
+           Never send an empty description.
         5. Use the add_accomplishment tool with the appropriate parameters
+
+        WHEN UPDATING ACCOMPLISHMENTS:
+        1. update_accomplishment requires the accomplishment's ID.
+        2. If you don't already know the ID, use search_accomplishments (by title text and/or date) to find it first.
+        3. Then call update_accomplishment with the ID and only the fields that should change.
 
         When a user asks to list or view accomplishments:
         - Use list_accomplishments for general listing with pagination

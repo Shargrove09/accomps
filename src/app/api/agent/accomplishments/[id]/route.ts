@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAccomplishment, updateAccomplishment } from "@/lib/actions";
 import { validateAgentApiKey } from "@/lib/api-auth";
+import { jsonError } from "@/lib/api-response";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -25,10 +26,7 @@ export async function PATCH(
 
     const existing = await getAccomplishment(id);
     if (!existing) {
-      return NextResponse.json(
-        { error: `Accomplishment ${id} not found` },
-        { status: 404 }
-      );
+      return jsonError(`Accomplishment ${id} not found`, 404);
     }
 
     const body = await request.json();
@@ -46,7 +44,7 @@ export async function PATCH(
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      return jsonError(result.error ?? "Failed to update accomplishment", 400);
     }
 
     return NextResponse.json({
@@ -55,11 +53,6 @@ export async function PATCH(
     });
   } catch (error) {
     console.error("API Error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { error: "Failed to update accomplishment", details: errorMessage },
-      { status: 500 }
-    );
+    return jsonError("Failed to update accomplishment", 500, error);
   }
 }

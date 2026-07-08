@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateAgentApiKey } from "@/lib/api-auth";
+import { jsonError } from "@/lib/api-response";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -21,11 +22,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("API Error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { error: "Failed to fetch categories", details: errorMessage },
-      { status: 500 }
-    );
+    return jsonError("Failed to fetch categories", 500, error);
   }
 }
