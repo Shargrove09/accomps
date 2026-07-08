@@ -20,7 +20,10 @@ def fetch_all_tags(api_url: str, api_key: str) -> list:
         response = requests.get(tags_url, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            return [tag['name'] for tag in data.get('tags', [])]
+            # Tolerate both shapes: a wrapped { "tags": [...] } object (current)
+            # or a bare array (older API), so a shape change can't silently break us.
+            tags = data if isinstance(data, list) else data.get('tags', [])
+            return [tag['name'] for tag in tags]
     except Exception as e:
         print(f"Warning: Failed to fetch tags for normalization: {e}")
     

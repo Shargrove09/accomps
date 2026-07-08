@@ -7,6 +7,10 @@ import { ParsedAccomplishment } from "@/lib/types";
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
 
+// NOTE: This is an inbound webhook (Resend), not part of the agent JSON API, so
+// handlers intentionally return plain-text `Response` bodies with meaningful
+// status codes rather than the shared jsonError() JSON shape.
+
 const allowedEmail = process.env.INBOUND_SENDER_WHITELIST;
 const defaultCategory = process.env.EMAIL_DEFAULT_CATEGORY ?? "Email";
 const agentUrl = process.env.AGENT_EMAIL_URL;

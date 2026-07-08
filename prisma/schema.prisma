@@ -40,6 +40,11 @@ model Accomplishment {
   tags        AccomplishmentTag[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  // Every list/search/stats query orders or filters on date; category filtering
+  // and cascade lookups hit categoryId.
+  @@index([date])
+  @@index([categoryId])
 }
 
 model AccomplishmentTag {

@@ -4,17 +4,19 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header
 
 from cache import TagCategoryCache
-from schemas import MessageInput, AccomplishmentParsed
-from parser_chain import chain, parser, llm_model
+from schemas import MessageInput, DescriptionInput, AccomplishmentParsed
+from parser_chain import chain, parser, llm_model, description_chain
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Accomplishment Agent API")
 
-# Initialize cache (ttl_seconds=0 means load once at startup)
-# To enable auto-refresh: change to TagCategoryCache(ttl_seconds=300) for 5-minute cache
-cache = TagCategoryCache(ttl_seconds=0)
+# Initialize cache. CACHE_TTL_SECONDS controls auto-refresh of tags/categories
+# used for LLM prompt context: >0 re-fetches after that many seconds (so newly
+# created tags/categories reach the parser without a restart), 0 = load once.
+CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "300"))
+cache = TagCategoryCache(ttl_seconds=CACHE_TTL_SECONDS)
 
 # --- Routes ---
 
@@ -94,6 +96,34 @@ async def parse_message(data: MessageInput, x_api_key: Optional[str] = Header(No
             "source": data.source,
             "reasoning": str(e),
         }
+
+@app.post("/api/generate-description")
+async def generate_description(data: DescriptionInput, x_api_key: Optional[str] = Header(None)):
+    # Verify API Key
+    expected_key = os.getenv("AGENT_API_KEY")
+    if expected_key and x_api_key != expected_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    if not data.title.strip():
+        raise HTTPException(status_code=400, detail="Title cannot be empty")
+
+    # Deterministic fallback used if the LLM call fails.
+    title = data.title.strip()
+    fallback = f"{title} ({data.category})." if data.category else f"{title}."
+
+    try:
+        tags_str = ", ".join(data.tags) if data.tags else "none"
+        description = description_chain.invoke({
+            "title": title,
+            "category": data.category or "none",
+            "tags": tags_str,
+            "context": data.context or "none",
+        })
+        description = (description or "").strip()
+        return {"description": description or fallback}
+    except Exception as e:
+        print(f"Error generating description: {e}")
+        return {"description": fallback}
 
 if __name__ == "__main__":
     import uvicorn

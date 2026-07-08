@@ -344,18 +344,22 @@ def list_accomplishments_by_date(start_date: str = "", end_date: str = "", timef
         return f"Unexpected error occurred while listing accomplishments: {e}"
 
 @tool
-def search_accomplishments(query: str = "", start_date: str = "", end_date: str = "") -> str:
-    """Searches accomplishments by title text and/or date range, returning their IDs.
+def search_accomplishments(query: str = "", start_date: str = "", end_date: str = "", tag: str = "", category: str = "") -> str:
+    """Searches accomplishments by title text, date range, tag, and/or category, returning their IDs.
 
     Use this tool when the user refers to a specific accomplishment (e.g. "the one
-    about the auth deploy") and you need its ID before updating it with
-    update_accomplishment. The returned entries include an "ID:" line.
+    about the auth deploy") and you need its ID before updating or deleting it, or
+    when the user wants to filter by a tag or category. The returned entries include
+    an "ID:" line.
 
     Args:
         query (str): Case-insensitive text to match against accomplishment titles
             (e.g. "authentication"). Optional.
         start_date (str): Start date in YYYY-MM-DD format. Optional.
         end_date (str): End date in YYYY-MM-DD format. Optional.
+        tag (str): Filter to accomplishments having ANY of these tags. Single name or
+            comma-separated (e.g. "release,deployment"). Case-insensitive. Optional.
+        category (str): Filter to a single category name (case-insensitive). Optional.
 
     Returns:
         str: A formatted list of matching accomplishments, each including its ID,
@@ -363,7 +367,8 @@ def search_accomplishments(query: str = "", start_date: str = "", end_date: str 
 
     Examples:
         - search_accomplishments(query="react hooks") -> matches by title
-        - search_accomplishments(query="deploy", start_date="2025-11-01") -> title + date
+        - search_accomplishments(tag="deployment") -> everything tagged deployment
+        - search_accomplishments(category="Work", start_date="2025-11-01") -> category + date
     """
     from datetime import datetime
 
@@ -373,8 +378,8 @@ def search_accomplishments(query: str = "", start_date: str = "", end_date: str 
     if not api_url or not api_key:
         return "Error: API URL or API Key is not configured. Please check your .env file."
 
-    if not query and not start_date and not end_date:
-        return "Error: Provide at least a 'query' or a date range to search."
+    if not query and not start_date and not end_date and not tag and not category:
+        return "Error: Provide at least a 'query', date range, tag, or category to search."
 
     headers = {
         "x-api-key": api_key,
@@ -387,6 +392,10 @@ def search_accomplishments(query: str = "", start_date: str = "", end_date: str 
         params["startDate"] = start_date
     if end_date:
         params["endDate"] = end_date
+    if tag:
+        params["tag"] = tag
+    if category:
+        params["category"] = category
 
     try:
         response = requests.get(api_url, headers=headers, params=params)
@@ -530,3 +539,165 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
         return f"Network error occurred: {req_err}"
     except Exception as e:
         return f"Unexpected error occurred while updating accomplishment: {e}"
+
+@tool
+def delete_accomplishment(accomplishment_id: str) -> str:
+    """
+    Deletes an accomplishment from the tracker by its ID. This is DESTRUCTIVE and
+    cannot be undone.
+
+    Before calling this tool:
+    - Use search_accomplishments to find and confirm the correct ID.
+    - Confirm the user actually intends to delete that specific accomplishment.
+
+    Args:
+        accomplishment_id (str): The unique ID of the accomplishment to delete.
+
+    Returns:
+        str: A message indicating success or failure of the operation.
+    """
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured. Please check your .env file."
+
+    headers = {
+        "x-api-key": api_key,
+    }
+
+    try:
+        response = requests.delete(f"{api_url}/{accomplishment_id}", headers=headers)
+        response.raise_for_status()
+        return f"Accomplishment with ID {accomplishment_id} deleted successfully."
+    except requests.exceptions.HTTPError as http_err:
+        status_code = response.status_code if 'response' in locals() else 'unknown'
+        if status_code == 401:
+            return "Error: Authentication failed. The API key may be invalid."
+        elif status_code == 404:
+            return f"Error: Accomplishment with ID {accomplishment_id} not found."
+        else:
+            return f"HTTP error {status_code}: {http_err}. Response: {response.text}"
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to the API. Is the server running?"
+    except requests.exceptions.RequestException as req_err:
+        return f"Network error occurred: {req_err}"
+    except Exception as e:
+        return f"Unexpected error occurred while deleting accomplishment: {e}"
+
+def _stats_url(api_url: str) -> str:
+    """Derive the /stats endpoint URL from the accomplishments API URL."""
+    if "/accomplishments" in api_url:
+        return api_url.replace("/accomplishments", "/stats")
+    return api_url.rsplit('/', 1)[0] + "/stats"
+
+@tool
+def get_stats(timeframe: str = "", start_date: str = "", end_date: str = "") -> str:
+    """Gets aggregate statistics about the user's accomplishments.
+
+    Returns totals (all-time, in-range, this week, number of categories and tags),
+    breakdowns by category and by tag, the most active day, and the current
+    consecutive-day logging streak. Use for questions like "how many accomplishments
+    do I have", "what do I work on most", or "what's my streak".
+
+    Args:
+        timeframe (str): Optional scope preset: today | week | month | year.
+            Omit (or "all") for all-time stats.
+        start_date (str): Optional explicit start date (YYYY-MM-DD); overrides timeframe.
+        end_date (str): Optional explicit end date (YYYY-MM-DD).
+
+    Returns:
+        str: A formatted summary of the statistics.
+    """
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured. Please check your .env file."
+
+    headers = {
+        "x-api-key": api_key,
+    }
+
+    params = {}
+    if timeframe:
+        params["timeframe"] = timeframe
+    if start_date:
+        params["startDate"] = start_date
+    if end_date:
+        params["endDate"] = end_date
+
+    try:
+        response = requests.get(_stats_url(api_url), headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        totals = data.get("totals", {})
+        trends = data.get("trends", {})
+        by_category = data.get("byCategory", [])
+        by_tag = data.get("byTag", [])
+
+        result = "📊 Accomplishment Stats\n"
+        result += "=" * 40 + "\n"
+        result += f"Total (all time): {totals.get('total', 0)}\n"
+        result += f"In selected range: {totals.get('inRange', 0)}\n"
+        result += f"This week: {totals.get('thisWeek', 0)}\n"
+        result += f"Categories: {totals.get('categories', 0)} | Tags: {totals.get('tags', 0)}\n"
+        result += f"Current streak: {trends.get('currentStreak', 0)} day(s)\n"
+
+        most_active = trends.get("mostActiveDay")
+        if most_active:
+            result += f"Most active day: {most_active.get('date')} ({most_active.get('count')} logged)\n"
+
+        if by_category:
+            result += "\nTop categories:\n"
+            for c in by_category[:5]:
+                result += f"  - {c.get('category')}: {c.get('count')}\n"
+        if by_tag:
+            result += "\nTop tags:\n"
+            for t in by_tag[:5]:
+                result += f"  - {t.get('tag')}: {t.get('count')}\n"
+
+        return result
+
+    except requests.exceptions.HTTPError as http_err:
+        status_code = response.status_code if 'response' in locals() else 'unknown'
+        if status_code == 401:
+            return "Error: Authentication failed. The API key may be invalid."
+        elif status_code == 404:
+            return "Error: The stats API endpoint was not found."
+        else:
+            return f"HTTP error {status_code}: {http_err}. Response: {response.text}"
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to the API. Is the server running?"
+    except requests.exceptions.RequestException as req_err:
+        return f"Network error occurred: {req_err}"
+    except Exception as e:
+        return f"Unexpected error occurred while fetching stats: {e}"
+
+@tool
+def weekly_summary(timeframe: str = "week") -> str:
+    """Gathers the data needed to narrate a natural-language accomplishment summary.
+
+    Fetches both the aggregate stats and the list of accomplishments for the
+    timeframe. IMPORTANT: do not just echo the raw numbers back — write a short,
+    friendly prose recap for the user (e.g. "This week you logged 7 accomplishments,
+    mostly in Engineering, and kept a 4-day streak going. Highlights included ...").
+    Call out totals, top categories/tags, the streak, and a couple of notable entries.
+
+    Args:
+        timeframe (str): today | week | month | year. Defaults to "week".
+
+    Returns:
+        str: Stats plus the accomplishments for the period, for you to summarize.
+    """
+    tf = timeframe or "week"
+    stats = get_stats.invoke({"timeframe": tf})
+    listing = list_accomplishments_by_date.invoke({"timeframe": tf})
+    return (
+        f"Write a short natural-language {tf} summary for the user based on the data "
+        f"below. Highlight the totals, top categories/tags, the current streak, and a "
+        f"few notable accomplishments. Do not just list raw numbers.\n\n"
+        f"--- STATS ---\n{stats}\n\n"
+        f"--- ACCOMPLISHMENTS ---\n{listing}"
+    )

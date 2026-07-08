@@ -53,12 +53,21 @@ def list_accomplishments_by_date(start_date: str = "", end_date: str = "", timef
 
 
 @mcp.tool()
-def search_accomplishments(query: str = "", start_date: str = "", end_date: str = "") -> str:
-    """Search accomplishments by title text and/or date range (YYYY-MM-DD). Returns
+def search_accomplishments(
+    query: str = "", start_date: str = "", end_date: str = "", tag: str = "", category: str = ""
+) -> str:
+    """Search accomplishments by title text, date range (YYYY-MM-DD), tag, and/or
+    category. `tag` may be a single name or comma-separated (matches ANY). Returns
     matching entries including their IDs — use this to find an accomplishment's ID
-    before calling update_accomplishment."""
+    before calling update_accomplishment or delete_accomplishment."""
     return accomps_tools.search_accomplishments.invoke(
-        {"query": query, "start_date": start_date, "end_date": end_date}
+        {
+            "query": query,
+            "start_date": start_date,
+            "end_date": end_date,
+            "tag": tag,
+            "category": category,
+        }
     )
 
 
@@ -88,6 +97,32 @@ def update_accomplishment(
             "description": description,
         }
     )
+
+
+@mcp.tool()
+def delete_accomplishment(accomplishment_id: str) -> str:
+    """Delete an accomplishment by id. DESTRUCTIVE and irreversible — first confirm
+    the id via search_accomplishments and confirm the user's intent to delete it."""
+    return accomps_tools.delete_accomplishment.invoke(
+        {"accomplishment_id": accomplishment_id}
+    )
+
+
+@mcp.tool()
+def get_stats(timeframe: str = "", start_date: str = "", end_date: str = "") -> str:
+    """Get aggregate stats: totals, per-category and per-tag breakdowns, most active
+    day, and the current logging streak. Optional scope: timeframe (today|week|month|
+    year) or explicit start_date/end_date (YYYY-MM-DD); omit for all-time."""
+    return accomps_tools.get_stats.invoke(
+        {"timeframe": timeframe, "start_date": start_date, "end_date": end_date}
+    )
+
+
+@mcp.tool()
+def weekly_summary(timeframe: str = "week") -> str:
+    """Gather stats + accomplishments for a period (today|week|month|year, default
+    week) and narrate a short natural-language recap — do not just echo raw numbers."""
+    return accomps_tools.weekly_summary.invoke({"timeframe": timeframe})
 
 
 if __name__ == "__main__":

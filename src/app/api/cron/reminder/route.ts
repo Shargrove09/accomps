@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Resend } from "resend";
+import { jsonError } from "@/lib/api-response";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     process.env.CRON_SECRET &&
     authHeader !== `Bearer ${process.env.CRON_SECRET}`
   ) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -22,10 +23,7 @@ export async function GET(request: Request) {
 
   if (!resendApiKey || !fromEmail || !toEmail) {
     console.error("Missing Resend configuration");
-    return NextResponse.json(
-      { error: "Missing Resend configuration" },
-      { status: 500 },
-    );
+    return jsonError("Missing Resend configuration", 500);
   }
 
   try {
@@ -76,12 +74,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error in reminder cron job:", error);
-    return NextResponse.json(
-      {
-        error: "Internal Server Error",
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 },
-    );
+    return jsonError("Internal Server Error", 500, error);
   }
 }

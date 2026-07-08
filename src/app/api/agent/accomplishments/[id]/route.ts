@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAccomplishment, updateAccomplishment } from "@/lib/actions";
+import {
+  getAccomplishment,
+  updateAccomplishment,
+  deleteAccomplishment,
+} from "@/lib/actions";
 import { validateAgentApiKey } from "@/lib/api-auth";
 import { jsonError } from "@/lib/api-response";
 
@@ -54,5 +58,35 @@ export async function PATCH(
   } catch (error) {
     console.error("API Error:", error);
     return jsonError("Failed to update accomplishment", 500, error);
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authError = validateAgentApiKey(request);
+  if (authError) return authError;
+
+  try {
+    const { id } = await params;
+
+    const existing = await getAccomplishment(id);
+    if (!existing) {
+      return jsonError(`Accomplishment ${id} not found`, 404);
+    }
+
+    const result = await deleteAccomplishment(id);
+    if (!result.success) {
+      return jsonError(result.error ?? "Failed to delete accomplishment", 400);
+    }
+
+    return NextResponse.json({
+      message: "Accomplishment deleted successfully",
+      id,
+    });
+  } catch (error) {
+    console.error("API Error:", error);
+    return jsonError("Failed to delete accomplishment", 500, error);
   }
 }

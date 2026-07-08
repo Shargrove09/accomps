@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { PendingStatus } from "@/generated/prisma/client";
+import { PendingStatus, Prisma } from "@/generated/prisma/client";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -31,22 +31,32 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
+/**
+ * Prisma client accepted by the tag/category helpers — either the singleton
+ * `db` or an interactive-transaction client (`tx`), so callers can run these
+ * inside `db.$transaction(...)`.
+ */
+type PrismaClientOrTx = Prisma.TransactionClient;
+
 /** Find an existing category by name, or create one with a random color. */
-async function findOrCreateCategory(name: string) {
-  const existing = await db.category.findUnique({ where: { name } });
+async function findOrCreateCategory(
+  name: string,
+  client: PrismaClientOrTx = db,
+) {
+  const existing = await client.category.findUnique({ where: { name } });
   if (existing) return existing;
 
-  return db.category.create({
+  return client.category.create({
     data: { name, color: getRandomColor() },
   });
 }
 
 /** Find an existing tag by name, or create one with a random color. */
-async function findOrCreateTag(name: string) {
-  const existing = await db.tag.findUnique({ where: { name } });
+async function findOrCreateTag(name: string, client: PrismaClientOrTx = db) {
+  const existing = await client.tag.findUnique({ where: { name } });
   if (existing) return existing;
 
-  return db.tag.create({
+  return client.tag.create({
     data: { name, color: getRandomColor() },
   });
 }
@@ -55,10 +65,11 @@ async function findOrCreateTag(name: string) {
 async function linkTagsToAccomplishment(
   accomplishmentId: string,
   tagNames: string[],
+  client: PrismaClientOrTx = db,
 ) {
   for (const tagName of tagNames) {
-    const tag = await findOrCreateTag(tagName);
-    await db.accomplishmentTag.create({
+    const tag = await findOrCreateTag(tagName, client);
+    await client.accomplishmentTag.create({
       data: { accomplishmentId, tagId: tag.id },
     });
   }
@@ -237,36 +248,39 @@ export async function updateAccomplishment({
   }
 
   try {
-    const categoryRecord = await findOrCreateCategory(category);
+    // Run the update + tag replacement atomically so a mid-way failure can't
+    // leave the accomplishment with a partially-rebuilt tag set.
+    const updatedAccomplishment = await db.$transaction(async (tx) => {
+      const categoryRecord = await findOrCreateCategory(category, tx);
 
-    // Update accomplishment
-    await db.accomplishment.update({
-      where: { id },
-      data: {
-        title,
-        description,
-        categoryId: categoryRecord.id,
-        ...(date && { date }),
-      },
+      await tx.accomplishment.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          categoryId: categoryRecord.id,
+          ...(date && { date }),
+        },
+      });
+
+      // Replace tag associations: delete existing, then create new
+      await tx.accomplishmentTag.deleteMany({
+        where: { accomplishmentId: id },
+      });
+
+      if (tags.length > 0) {
+        await linkTagsToAccomplishment(id, tags, tx);
+      }
+
+      return tx.accomplishment.findUnique({
+        where: { id },
+        include: accomplishmentInclude,
+      });
     });
-
-    // Replace tag associations: delete existing, then create new
-    await db.accomplishmentTag.deleteMany({
-      where: { accomplishmentId: id },
-    });
-
-    if (tags.length > 0) {
-      await linkTagsToAccomplishment(id, tags);
-    }
 
     revalidatePath("/");
     revalidatePath("/calendar");
     revalidatePath("/tags");
-
-    const updatedAccomplishment = await db.accomplishment.findUnique({
-      where: { id },
-      include: accomplishmentInclude,
-    });
 
     return { success: true, data: updatedAccomplishment };
   } catch (error) {
@@ -277,12 +291,9 @@ export async function updateAccomplishment({
 
 export async function deleteAccomplishment(id: string) {
   try {
-    // Delete associated accomplishmentTags first
-    await db.accomplishmentTag.deleteMany({
-      where: { accomplishmentId: id },
-    });
-
-    // Delete the accomplishment
+    // AccomplishmentTag rows cascade-delete via the schema relation
+    // (onDelete: Cascade), so a single delete atomically removes the
+    // accomplishment and its tag links.
     await db.accomplishment.delete({
       where: { id },
     });
@@ -307,6 +318,241 @@ export async function getAccomplishmentsByTag(tag: string) {
   } catch (error) {
     console.error("Error fetching accomplishments by tag:", error);
     return [];
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+export type AccomplishmentStats = {
+  totals: {
+    total: number;
+    inRange: number;
+    thisWeek: number;
+    categories: number;
+    tags: number;
+  };
+  range: { startDate: string | null; endDate: string | null };
+  byCategory: { category: string; count: number }[];
+  byTag: { tag: string; count: number }[];
+  trends: {
+    perDay: { date: string; count: number }[];
+    mostActiveDay: { date: string; count: number } | null;
+    currentStreak: number;
+  };
+};
+
+const EMPTY_STATS: AccomplishmentStats = {
+  totals: { total: 0, inRange: 0, thisWeek: 0, categories: 0, tags: 0 },
+  range: { startDate: null, endDate: null },
+  byCategory: [],
+  byTag: [],
+  trends: { perDay: [], mostActiveDay: null, currentStreak: 0 },
+};
+
+/** UTC day bucket (YYYY-MM-DD) used for per-day trends and streak calc. */
+function dayKey(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Aggregate stats over an optional date range: core totals, per-category and
+ * per-tag breakdowns, per-day trend, most-active day, and the current
+ * consecutive-day logging streak (computed over the last ~year, independent of
+ * the requested range). Returns zeroed stats on error so callers never throw.
+ */
+export async function getAccomplishmentStats({
+  startDate,
+  endDate,
+}: {
+  startDate?: Date;
+  endDate?: Date;
+} = {}): Promise<AccomplishmentStats> {
+  try {
+    const rangeFilter: Prisma.AccomplishmentWhereInput =
+      startDate || endDate
+        ? {
+            date: {
+              ...(startDate && { gte: startDate }),
+              ...(endDate && { lte: endDate }),
+            },
+          }
+        : {};
+
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const streakSince = new Date();
+    streakSince.setDate(streakSince.getDate() - 366);
+
+    const [
+      total,
+      inRange,
+      thisWeek,
+      totalCategories,
+      totalTags,
+      categoryGroups,
+      tagGroups,
+      rangeDates,
+      streakRows,
+    ] = await Promise.all([
+      db.accomplishment.count(),
+      db.accomplishment.count({ where: rangeFilter }),
+      db.accomplishment.count({ where: { date: { gte: weekAgo } } }),
+      db.category.count(),
+      db.tag.count(),
+      db.accomplishment.groupBy({
+        by: ["categoryId"],
+        where: rangeFilter,
+        _count: { _all: true },
+        orderBy: { _count: { categoryId: "desc" } },
+      }),
+      db.accomplishmentTag.groupBy({
+        by: ["tagId"],
+        where: { accomplishment: rangeFilter },
+        _count: { _all: true },
+        orderBy: { _count: { tagId: "desc" } },
+      }),
+      db.accomplishment.findMany({
+        where: rangeFilter,
+        select: { date: true },
+        orderBy: { date: "asc" },
+      }),
+      db.accomplishment.findMany({
+        where: { date: { gte: streakSince } },
+        select: { date: true },
+      }),
+    ]);
+
+    // Resolve category/tag ids → names for the breakdowns.
+    const [categories, tags] = await Promise.all([
+      db.category.findMany({
+        where: { id: { in: categoryGroups.map((g) => g.categoryId) } },
+        select: { id: true, name: true },
+      }),
+      db.tag.findMany({
+        where: { id: { in: tagGroups.map((g) => g.tagId) } },
+        select: { id: true, name: true },
+      }),
+    ]);
+    const catName = new Map(categories.map((c) => [c.id, c.name]));
+    const tagName = new Map(tags.map((t) => [t.id, t.name]));
+
+    const byCategory = categoryGroups.map((g) => ({
+      category: catName.get(g.categoryId) ?? "Unknown",
+      count: g._count._all,
+    }));
+    const byTag = tagGroups.map((g) => ({
+      tag: tagName.get(g.tagId) ?? "Unknown",
+      count: g._count._all,
+    }));
+
+    // Per-day counts within the range.
+    const perDayMap = new Map<string, number>();
+    for (const row of rangeDates) {
+      const key = dayKey(row.date);
+      perDayMap.set(key, (perDayMap.get(key) ?? 0) + 1);
+    }
+    const perDay = [...perDayMap.entries()]
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const mostActiveDay = perDay.reduce<{ date: string; count: number } | null>(
+      (max, d) => (d.count > (max?.count ?? 0) ? d : max),
+      null,
+    );
+
+    // Current streak: walk backwards from today over distinct logged days.
+    const daySet = new Set(streakRows.map((r) => dayKey(r.date)));
+    let currentStreak = 0;
+    const cursor = new Date();
+    if (!daySet.has(dayKey(cursor))) {
+      cursor.setDate(cursor.getDate() - 1); // allow a streak that ended yesterday
+    }
+    while (daySet.has(dayKey(cursor))) {
+      currentStreak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return {
+      totals: {
+        total,
+        inRange,
+        thisWeek,
+        categories: totalCategories,
+        tags: totalTags,
+      },
+      range: {
+        startDate: startDate?.toISOString() ?? null,
+        endDate: endDate?.toISOString() ?? null,
+      },
+      byCategory,
+      byTag,
+      trends: { perDay, mostActiveDay, currentStreak },
+    };
+  } catch (error) {
+    console.error("Error computing accomplishment stats:", error);
+    return EMPTY_STATS;
+  }
+}
+
+// ── LLM description generation ────────────────────────────────────────────────
+
+/**
+ * Generate a concise one-sentence description for an accomplishment via the
+ * Python LLM agent (POST AGENT_DESCRIPTION_URL). Mirrors the parseWithAgent
+ * pattern in the Resend route. Always resolves — falls back to a deterministic
+ * "{title} ({category})." string if the agent is unconfigured or unreachable,
+ * so callers (web form, create fallback) never break on agent downtime.
+ */
+export async function generateDescription({
+  title,
+  category,
+  tags,
+  context,
+}: {
+  title: string;
+  category?: string;
+  tags?: string[];
+  context?: string;
+}): Promise<{ success: boolean; description: string; error?: string }> {
+  const trimmedTitle = title?.trim();
+  if (!trimmedTitle) {
+    return { success: false, description: "", error: "Title is required" };
+  }
+
+  const fallback = category
+    ? `${trimmedTitle} (${category}).`
+    : `${trimmedTitle}.`;
+
+  const agentUrl = process.env.AGENT_DESCRIPTION_URL;
+  const agentApiKey = process.env.AGENT_API_KEY;
+  if (!agentUrl || !agentApiKey) {
+    return { success: true, description: fallback };
+  }
+
+  try {
+    const res = await fetch(agentUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": agentApiKey,
+      },
+      body: JSON.stringify({ title: trimmedTitle, category, tags, context }),
+    });
+
+    if (!res.ok) {
+      console.error("Description agent returned non-OK status", res.status);
+      return { success: true, description: fallback };
+    }
+
+    const data = await res.json();
+    const description =
+      typeof data?.description === "string" && data.description.trim()
+        ? data.description.trim()
+        : fallback;
+    return { success: true, description };
+  } catch (error) {
+    console.error("Error calling description agent:", error);
+    return { success: true, description: fallback };
   }
 }
 

@@ -5,6 +5,12 @@ class MessageInput(BaseModel):
     input: str
     source: str = "message"
 
+class DescriptionInput(BaseModel):
+    title: str
+    category: Optional[str] = None
+    tags: List[str] = []
+    context: Optional[str] = None
+
 class AccomplishmentParsed(BaseModel):
     title: str
     description: Optional[str] = None

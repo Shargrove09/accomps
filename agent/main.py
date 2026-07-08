@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment
+from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment, delete_accomplishment, get_stats, weekly_summary
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -97,7 +97,7 @@ def main():
     )
 
     # Define the tools
-    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment]
+    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment, delete_accomplishment, get_stats, weekly_summary]
 
     # Define the system prompt
     system_prompt = """You are a helpful assistant that helps users track their accomplishments.
@@ -106,13 +106,27 @@ def main():
         - add_accomplishment: Add a new accomplishment (title, category, tags, description)
         - list_accomplishments: List accomplishments with pagination (default 5 per page)
         - list_accomplishments_by_date: Filter by timeframe (today/week/month/year) or date range
-        - search_accomplishments: Find accomplishments by title text and/or date range; returns their IDs
+        - search_accomplishments: Find accomplishments by title text, date range, tag, and/or category; returns their IDs
         - list_tags: Show all available tags in the system
         - list_categories: Show all available categories in the system
         - update_accomplishment: Update an existing accomplishment by its ID
+        - delete_accomplishment: Delete an accomplishment by its ID (destructive)
+        - get_stats: Aggregate statistics (totals, category/tag breakdowns, most active day, streak)
+        - weekly_summary: Data for a natural-language recap of a period (today/week/month/year)
 
         BEHAVIOR GUIDELINES:
         1. **Data Retrieval (Listing/Viewing)**: When a tool returns a list of items or data, output it EXACTLY as received. Do NOT attempt to "correct", "fix", or "rewrite" the output of the list tool. Do not strip emojis. Do not duplicate the content or send the same content more than once.
+
+        WHEN DELETING ACCOMPLISHMENTS:
+        1. delete_accomplishment is destructive and cannot be undone.
+        2. If you don't already know the ID, use search_accomplishments to find it first.
+        3. Confirm the specific accomplishment with the user before calling delete_accomplishment.
+
+        WHEN SUMMARIZING (weekly_summary / get_stats):
+        - weekly_summary returns raw stats and a list. Do NOT just echo it back — write a
+          short, friendly natural-language recap: totals, top categories/tags, the current
+          streak, and a couple of notable accomplishments.
+        - Use get_stats for direct "how many / what do I do most / what's my streak" questions.
 
         WHEN ADDING ACCOMPLISHMENTS:
         1. Extract the accomplishment title from their request

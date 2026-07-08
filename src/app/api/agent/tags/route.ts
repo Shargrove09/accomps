@@ -18,7 +18,9 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json(tags);
+    // Return a wrapped object ({ tags }) to match the categories route and the
+    // Python agent's fetch_all_tags helper, which reads data.get("tags", []).
+    return NextResponse.json({ tags });
   } catch (error) {
     console.error("API Error fetching tags:", error);
     return jsonError("Failed to fetch tags", 500, error);
