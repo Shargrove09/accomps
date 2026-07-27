@@ -6,17 +6,23 @@ from tool_helpers import fetch_all_tags, fetch_all_categories, normalize_accompl
 
 
 @tool
-def add_accomplishment(title: str, category: str, tags: str, description: str = "") -> str:
+def add_accomplishment(
+    title: str, category: str, tags: str, description: str = "", create_new_category: bool = False
+) -> str:
     """
     Adds a new accomplishment to the tracker.
 
     Args:
         title (str): The title of the accomplishment. Must be a clear, concise summary, corrected for typos and grammar.
         category (str): The category for the accomplishment (e.g., 'Work', 'Learning', 'Personal').
+            Reuse an existing category whenever possible — call list_categories if unsure.
         tags (str): Comma-separated tags to associate with the accomplishment (e.g., 'release,deployment').
         description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar.
             If the user did not provide a description, generate a concise one-sentence description
             in natural language from the title and context before calling this tool — do not leave it blank.
+        create_new_category (bool, optional): Leave False by default. If the category does not match an
+            existing one, this tool returns without saving and asks you to confirm creating a new category.
+            Only after the user confirms should you call again with create_new_category=True.
 
     Returns:
         str: A message indicating success or failure of the operation.
@@ -41,6 +47,22 @@ def add_accomplishment(title: str, category: str, tags: str, description: str = 
         api_url=api_url,
         api_key=api_key
     )
+
+    # Confirm-gate: don't silently create a brand-new category. Ask the user first.
+    if normalized["category_is_new"] and not create_new_category:
+        suggestions = normalized["category_suggestions"] or normalized["existing_categories"]
+        if suggestions:
+            options = ", ".join(f"'{c}'" for c in suggestions)
+            return (
+                f"'{normalized['category']}' isn't an existing category. "
+                f"Closest existing categories: {options}. Ask the user whether to use one of "
+                f"those instead, or to confirm creating the new category '{normalized['category']}'. "
+                f"To create it, call add_accomplishment again with create_new_category=True."
+            )
+        return (
+            f"'{normalized['category']}' isn't an existing category. Ask the user to confirm "
+            f"creating it, then call add_accomplishment again with create_new_category=True."
+        )
 
     payload = {
         "title": normalized["title"],

@@ -20,20 +20,43 @@ mcp = FastMCP(
     instructions=(
         "You are connected to the user's personal Accomplishments tracker. "
         "Use it to record achievements and to recall what the user has done — "
-        "by recency or by date range. Reuse existing categories and tags for "
-        "consistency (call list_tags / list_categories when unsure)."
+        "by recency or by date range.\n\n"
+        "ADDING: Only call add_accomplishment when the user's CURRENT message "
+        "describes a brand-new accomplishment. If the current message is a greeting, "
+        "a question, a request about existing entries, empty, or ambiguous, do NOT add "
+        "anything — ask what they'd like to record. Never re-add a previously logged "
+        "accomplishment. When a message is NOT a new accomplishment, respond to that "
+        "message on its own — do NOT restate, re-confirm, or echo an accomplishment "
+        "from an earlier turn unless the user explicitly asks about it.\n\n"
+        "TAGS & CATEGORIES: Reuse existing categories and tags for consistency — call "
+        "list_categories / list_tags when unsure, and prefer an existing name over a "
+        "new variant. Introducing a new CATEGORY requires the user's confirmation "
+        "(add_accomplishment will tell you when and how)."
     ),
 )
 
 
 @mcp.tool()
-def add_accomplishment(title: str, category: str, tags: str, description: str = "") -> str:
-    """Record a new accomplishment. `tags` is a comma-separated string. Clean up the
-    title/description for typos and grammar before saving. If the user did not provide a
-    description, generate a concise one-sentence description from the title/context —
-    don't leave it blank."""
+def add_accomplishment(
+    title: str, category: str, tags: str, description: str = "", create_new_category: bool = False
+) -> str:
+    """Record a new accomplishment described in the user's CURRENT message. `tags` is a
+    comma-separated string. Reuse existing categories/tags (call list_categories /
+    list_tags when unsure). Clean up the title/description for typos and grammar. When
+    this is a new accomplishment and the user gave no description, generate a concise
+    one-sentence description from the title/context.
+
+    Leave `create_new_category=False` by default. If the category isn't an existing one,
+    this tool returns WITHOUT saving and tells you to confirm creating it with the user;
+    only after they confirm, call again with create_new_category=True."""
     return accomps_tools.add_accomplishment.invoke(
-        {"title": title, "category": category, "tags": tags, "description": description}
+        {
+            "title": title,
+            "category": category,
+            "tags": tags,
+            "description": description,
+            "create_new_category": create_new_category,
+        }
     )
 
 
