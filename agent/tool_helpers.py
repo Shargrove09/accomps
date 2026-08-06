@@ -8,6 +8,12 @@ import string
 # genuinely distinct words together.
 _FUZZY_CUTOFF = 0.82
 
+# Tags use a LOOSER cutoff than categories: we want near-variants to snap onto an
+# existing tag aggressively so the tag list doesn't sprout a new entry per
+# accomplishment. Combined with the prefer-existing rule in the tag loop below,
+# a new tag is only minted when nothing existing reasonably fits.
+_TAG_FUZZY_CUTOFF = 0.70
+
 
 def _norm_key(name: str) -> str:
     """Collapse a tag/category name to a comparison key: lowercase, hyphens and
@@ -22,9 +28,10 @@ def _norm_key(name: str) -> str:
     return key
 
 
-def _match_existing(name: str, existing: list) -> str | None:
+def _match_existing(name: str, existing: list, cutoff: float = _FUZZY_CUTOFF) -> str | None:
     """Return the canonical existing name that `name` should snap to, or None if it
-    looks genuinely new. Matches on the normalized key first, then a fuzzy fallback."""
+    looks genuinely new. Matches on the normalized key first, then a fuzzy fallback.
+    `cutoff` controls fuzzy strictness (lower = snaps more aggressively)."""
     if not existing:
         return None
     # Map each existing name's normalized key -> its canonical spelling (first wins).
@@ -36,7 +43,7 @@ def _match_existing(name: str, existing: list) -> str | None:
     if key in norm_to_canonical:
         return norm_to_canonical[key]
 
-    close = difflib.get_close_matches(key, list(norm_to_canonical), n=1, cutoff=_FUZZY_CUTOFF)
+    close = difflib.get_close_matches(key, list(norm_to_canonical), n=1, cutoff=cutoff)
     if close:
         return norm_to_canonical[close[0]]
     return None
@@ -167,19 +174,29 @@ def normalize_accomplishment_fields(
         elif category.islower():
             category = string.capwords(category)
 
-    # Parse and normalize tags. Snap near-duplicates onto existing tags; let a
-    # genuinely new tag through (medium strictness — tags stay flexible).
+    # Parse and normalize tags with a strong bias toward existing tags:
+    #   1. Snap each proposed tag onto an existing one using the looser tag cutoff.
+    #   2. Prefer-existing: if ANY proposed tag matched an existing tag, keep only the
+    #      matched ones and DROP the unmatched (would-be-new) proposals — don't mint a
+    #      new tag when reasonable existing ones already fit.
+    #   3. Only when NOTHING matched (nothing existing fits at all) do we let the new
+    #      tag(s) through, so a fresh concept — or the very first tags — can still be
+    #      created.
     raw_tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-    tags_list = []
-
+    matched_tags = []  # snapped onto an existing tag
+    new_tags = []      # no existing tag matched
     for tag in raw_tags_list:
-        matched_tag = _match_existing(tag, existing_tags)
+        matched_tag = _match_existing(tag, existing_tags, cutoff=_TAG_FUZZY_CUTOFF)
         if matched_tag:
-            tags_list.append(matched_tag)
-        elif tag.islower():
-            tags_list.append(string.capwords(tag))
+            matched_tags.append(matched_tag)
         else:
-            tags_list.append(tag)
+            new_tags.append(string.capwords(tag) if tag.islower() else tag)
+
+    chosen_tags = matched_tags if matched_tags else new_tags
+
+    # De-duplicate while preserving order (two proposals can snap to the same tag).
+    seen = set()
+    tags_list = [t for t in chosen_tags if not (t in seen or seen.add(t))]
 
     return {
         "title": title,

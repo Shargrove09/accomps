@@ -1,19 +1,15 @@
 # Docker Deployment Guide for Accomplishments Tracker
 
-This guide explains how to deploy the **agent service** using Docker while keeping the Next.js frontend on Vercel. The agent runs locally with Ollama for AI-powered accomplishment parsing and is exposed to Vercel via Cloudflare Tunnel.
+This guide explains how to deploy the **agent service** using Docker while keeping the Next.js frontend on Vercel. The agent runs locally with a local LLM for AI-powered description generation and is exposed to Vercel via Cloudflare Tunnel.
 
 ## Architecture Overview
 
 ```
-Email → Resend Webhook
-              ↓
          Vercel (Next.js App)
-              ↓
+              ↓  (POST /api/generate-description)
          Cloudflare Tunnel (in Docker)
               ↓
-         Agent Service (FastAPI + Ollama in Docker)
-              ↓
-         Database (PostgreSQL - managed service)
+         Agent Service (FastAPI + LLM in Docker)
 ```
 
 ## Prerequisites
@@ -154,8 +150,7 @@ openssl rand -hex 32
 In your **Vercel dashboard** → Project Settings → Environment Variables, add/update:
 
 ```bash
-AGENT_EMAIL_URL=https://<your-tunnel-url>/api/parse-message
-AGENT_SMS_URL=https://<your-tunnel-url>/api/parse-message
+AGENT_DESCRIPTION_URL=https://<your-tunnel-url>/api/generate-description
 AGENT_API_KEY=same-key-as-local-env
 ```
 
@@ -230,24 +225,16 @@ curl https://<your-tunnel-url>/health
 
 Should return the same health response.
 
-#### d. Test agent parsing (local)
+#### d. Test description generation (local)
 
 ```bash
-curl -X POST http://localhost:8000/api/parse-message \
+curl -X POST http://localhost:8000/api/generate-description \
   -H "Content-Type: application/json" \
   -H "x-api-key: your-api-key-here" \
-  -d '{"input": "Completed code review for authentication PR", "source": "test"}'
+  -d '{"title": "Completed code review for authentication PR", "category": "Work", "tags": ["review"]}'
 ```
 
-Expected response with parsed accomplishment structure.
-
-#### e. Send test email
-
-Send an email to your Resend inbound address. Check:
-
-- Vercel function logs (should show agent call)
-- Docker logs: `docker-compose logs agent`
-- Database for new accomplishment entry
+Expected response: `{"description": "..."}` with a one-sentence description.
 
 ---
 
@@ -493,11 +480,9 @@ Docker Compose handles both `/` and `\` on Windows, but use `/` in `docker-compo
 
 After successful deployment:
 
-1. **Test email-to-accomplishment flow** end-to-end
+1. **Test the description-generation flow** end-to-end (web form "Generate" button)
 2. **Set up monitoring** for container health (Portainer, Uptime Kuma, etc.)
-3. **Configure automated backups** for Ollama models volume
-4. **Add Resend webhook URL** in Resend dashboard pointing to Vercel
-5. **Configure Vercel cron secret** for daily reminder job
+3. **Configure automated backups** for the LLM models volume
 
 ---
 

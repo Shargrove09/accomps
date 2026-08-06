@@ -41,6 +41,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY server.py .
+COPY parser_chain.py .
+COPY schemas.py .
 COPY tool.py .
 COPY tool_helpers.py .
 COPY main.py .

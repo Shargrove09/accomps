@@ -71,15 +71,3 @@ export type FilterOptions = {
   };
   search?: string;
 };
-
-export type ParsedAccomplishment = {
-  title: string;
-  description?: string;
-  category?: string;
-  tags: string[];
-  confidence?: number;
-  status?: string;
-  reasoning?: string;
-  raw_input?: string;
-  source?: string;
-};

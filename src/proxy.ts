@@ -10,8 +10,6 @@ export function proxy(request: NextRequest) {
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/agent") ||
-    pathname.startsWith("/api/cron") ||
-    pathname.startsWith("/api/resend") ||
     pathname.startsWith("/api/webhooks")
   ) {
     return NextResponse.next();
