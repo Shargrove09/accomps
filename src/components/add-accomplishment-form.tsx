@@ -132,6 +132,9 @@ export function AddAccomplishmentForm() {
         description: finalDescription || undefined,
         category: category.trim(),
         tags: tagNames,
+        // The form's "+ Create New Category" option is a deliberate human
+        // choice, so this path opts in. The agent API does not.
+        allowNewCategory: true,
       });
 
       // Reset form

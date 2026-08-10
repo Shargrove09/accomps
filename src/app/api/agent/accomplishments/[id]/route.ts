@@ -5,7 +5,11 @@ import {
   deleteAccomplishment,
 } from "@/lib/actions";
 import { validateAgentApiKey } from "@/lib/api-auth";
-import { jsonError } from "@/lib/api-response";
+import {
+  jsonError,
+  jsonUnknownCategory,
+  UNKNOWN_CATEGORY,
+} from "@/lib/api-response";
 
 // Mark this route as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -48,6 +52,13 @@ export async function PATCH(
     });
 
     if (!result.success) {
+      // Same closed-set rule as POST — an edit can't smuggle in a new category.
+      if (result.code === UNKNOWN_CATEGORY) {
+        return jsonUnknownCategory(
+          result.error ?? `Unknown category '${category}'`,
+          result.availableCategories ?? []
+        );
+      }
       return jsonError(result.error ?? "Failed to update accomplishment", 400);
     }
 

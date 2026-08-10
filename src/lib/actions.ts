@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
+import { UNKNOWN_CATEGORY } from "@/lib/api-response";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -19,6 +20,26 @@ const RANDOM_COLORS = [
 
 function getRandomColor() {
   return RANDOM_COLORS[Math.floor(Math.random() * RANDOM_COLORS.length)];
+}
+
+/**
+ * Invalidate cached routes after a write that has already committed.
+ *
+ * revalidatePath throws when there's no request context (scripts, cron jobs,
+ * some route handlers). Because these calls sit at the end of a try block, that
+ * error would otherwise be caught and reported as a failed write — telling the
+ * caller to retry an operation that already succeeded, which for a merge or a
+ * create means applying it twice. A stale cache is by far the safer failure, so
+ * swallow it and carry on.
+ */
+function revalidate(...paths: string[]) {
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch (error) {
+      console.warn(`revalidatePath("${path}") failed (non-fatal):`, error);
+    }
+  }
 }
 
 /** True when a Prisma error is a unique-constraint violation (P2002). */
@@ -38,27 +59,68 @@ function isUniqueConstraintError(error: unknown): boolean {
  */
 type PrismaClientOrTx = Prisma.TransactionClient;
 
-/** Find an existing category by name, or create one with a random color. */
-async function findOrCreateCategory(
+/**
+ * Find an existing category by name, case-insensitively.
+ *
+ * The `@unique` on Category.name is case-sensitive, so `findUnique` happily lets
+ * `work` become a second row next to `Work`. Matching case-insensitively here
+ * collapses that whole duplicate class on every path — agent, API and web form.
+ */
+async function findCategoryByName(
   name: string,
   client: PrismaClientOrTx = db,
 ) {
-  const existing = await client.category.findUnique({ where: { name } });
-  if (existing) return existing;
-
-  return client.category.create({
-    data: { name, color: getRandomColor() },
+  return client.category.findFirst({
+    where: { name: { equals: name.trim(), mode: "insensitive" } },
   });
 }
 
-/** Find an existing tag by name, or create one with a random color. */
+/** Find an existing tag by name (case-insensitive), or create one. */
 async function findOrCreateTag(name: string, client: PrismaClientOrTx = db) {
-  const existing = await client.tag.findUnique({ where: { name } });
+  const existing = await client.tag.findFirst({
+    where: { name: { equals: name.trim(), mode: "insensitive" } },
+  });
   if (existing) return existing;
 
   return client.tag.create({
     data: { name, color: getRandomColor() },
   });
+}
+
+/**
+ * Resolve a category name to its record, creating it only when explicitly allowed.
+ *
+ * Categories are a closed set by default: the agent API never passes
+ * `allowCreate`, so an unrecognized category is refused rather than minted as a
+ * side effect of recording an accomplishment. A category can't be deleted once
+ * anything points at it (onDelete: Restrict), so junk here is expensive.
+ * The web form opts in, because there a new category is a deliberate human act.
+ */
+async function resolveCategory(
+  name: string,
+  allowCreate: boolean,
+  client: PrismaClientOrTx = db,
+) {
+  const existing = await findCategoryByName(name, client);
+  if (existing) return { category: existing };
+
+  if (!allowCreate) {
+    const available = await client.category.findMany({
+      orderBy: { name: "asc" },
+      select: { name: true },
+    });
+    return {
+      category: null,
+      error: `'${name}' is not an existing category`,
+      code: UNKNOWN_CATEGORY,
+      availableCategories: available.map((c) => c.name),
+    };
+  }
+
+  const created = await client.category.create({
+    data: { name: name.trim(), color: getRandomColor() },
+  });
+  return { category: created };
 }
 
 /** Create AccomplishmentTag links for a set of tag names. */
@@ -118,11 +180,18 @@ export async function addAccomplishment({
   description,
   category,
   tags,
+  allowNewCategory = false,
 }: {
   title: string;
   description?: string;
   category: string;
   tags: string[];
+  /**
+   * Opt in to creating the category if it doesn't exist. Defaults to false so
+   * that any caller which hasn't thought about it fails closed; the web form
+   * passes true because its "+ Create New Category" flow is an explicit choice.
+   */
+  allowNewCategory?: boolean;
 }) {
   const validationError = validateAccomplishmentInput({
     title,
@@ -135,14 +204,22 @@ export async function addAccomplishment({
   }
 
   try {
-    const categoryRecord = await findOrCreateCategory(category);
+    const resolved = await resolveCategory(category, allowNewCategory);
+    if (!resolved.category) {
+      return {
+        success: false,
+        error: resolved.error,
+        code: resolved.code,
+        availableCategories: resolved.availableCategories,
+      };
+    }
 
     const accomplishment = await db.accomplishment.create({
       data: {
         title,
         description,
         date: new Date(),
-        categoryId: categoryRecord.id,
+        categoryId: resolved.category.id,
       },
     });
 
@@ -150,7 +227,7 @@ export async function addAccomplishment({
       await linkTagsToAccomplishment(accomplishment.id, tags);
     }
 
-    revalidatePath("/");
+    revalidate("/");
     return { success: true, id: accomplishment.id };
   } catch (error) {
     console.error("Error adding accomplishment:", error);
@@ -229,6 +306,7 @@ export async function updateAccomplishment({
   category,
   tags,
   date,
+  allowNewCategory = false,
 }: {
   id: string;
   title: string;
@@ -236,6 +314,8 @@ export async function updateAccomplishment({
   category: string;
   tags: string[];
   date?: Date;
+  /** See addAccomplishment — defaults to false so callers fail closed. */
+  allowNewCategory?: boolean;
 }) {
   const validationError = validateAccomplishmentInput({
     title,
@@ -247,18 +327,29 @@ export async function updateAccomplishment({
     return { success: false, error: validationError };
   }
 
+  // Resolve the category before opening the transaction: an unknown category is
+  // a refusal, not a failure, and there's nothing to roll back.
+  const resolved = await resolveCategory(category, allowNewCategory);
+  if (!resolved.category) {
+    return {
+      success: false,
+      error: resolved.error,
+      code: resolved.code,
+      availableCategories: resolved.availableCategories,
+    };
+  }
+  const categoryId = resolved.category.id;
+
   try {
     // Run the update + tag replacement atomically so a mid-way failure can't
     // leave the accomplishment with a partially-rebuilt tag set.
     const updatedAccomplishment = await db.$transaction(async (tx) => {
-      const categoryRecord = await findOrCreateCategory(category, tx);
-
       await tx.accomplishment.update({
         where: { id },
         data: {
           title,
           description,
-          categoryId: categoryRecord.id,
+          categoryId,
           ...(date && { date }),
         },
       });
@@ -278,9 +369,7 @@ export async function updateAccomplishment({
       });
     });
 
-    revalidatePath("/");
-    revalidatePath("/calendar");
-    revalidatePath("/tags");
+    revalidate("/", "/calendar", "/tags");
 
     return { success: true, data: updatedAccomplishment };
   } catch (error) {
@@ -298,9 +387,7 @@ export async function deleteAccomplishment(id: string) {
       where: { id },
     });
 
-    revalidatePath("/");
-    revalidatePath("/calendar");
-    revalidatePath("/tags");
+    revalidate("/", "/calendar", "/tags");
     return { success: true };
   } catch (error) {
     console.error("Error deleting accomplishment:", error);
@@ -574,6 +661,55 @@ export async function getCategoriesWithAccomplishmentCount() {
   }
 }
 
+/**
+ * Deliberately create a category. This is the only path that mints one for the
+ * agent — recording an accomplishment never does it as a side effect, so adding
+ * to the taxonomy is always a distinct, separately-approved act.
+ */
+export async function createCategory({
+  name,
+  description,
+}: {
+  name: string;
+  description?: string;
+}) {
+  const trimmed = name?.trim() ?? "";
+  if (!trimmed) {
+    return { success: false, error: "Category name cannot be empty" };
+  }
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    return {
+      success: false,
+      error: `Category name must be ${MAX_NAME_LENGTH} characters or less`,
+    };
+  }
+
+  try {
+    const existing = await findCategoryByName(trimmed);
+    if (existing) {
+      return {
+        success: false,
+        alreadyExists: true,
+        data: existing,
+        error: `Category '${existing.name}' already exists`,
+      };
+    }
+
+    const category = await db.category.create({
+      data: { name: trimmed, description, color: getRandomColor() },
+    });
+
+    revalidate("/", "/categories");
+    return { success: true, data: category };
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { success: false, error: "A category with that name already exists" };
+    }
+    console.error("Error creating category:", error);
+    return { success: false, error: "Failed to create category" };
+  }
+}
+
 export async function updateCategory({
   id,
   name,
@@ -605,8 +741,7 @@ export async function updateCategory({
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/categories");
+    revalidate("/", "/categories");
     return { success: true, data: category };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -633,8 +768,7 @@ export async function deleteCategory(id: string) {
 
     await db.category.delete({ where: { id } });
 
-    revalidatePath("/");
-    revalidatePath("/categories");
+    revalidate("/", "/categories");
     return { success: true };
   } catch (error) {
     console.error("Error deleting category:", error);
@@ -666,9 +800,7 @@ export async function mergeCategory({
     });
     await db.category.delete({ where: { id: sourceId } });
 
-    revalidatePath("/");
-    revalidatePath("/categories");
-    revalidatePath("/calendar");
+    revalidate("/", "/categories", "/calendar");
     return { success: true };
   } catch (error) {
     console.error("Error merging categories:", error);
@@ -709,8 +841,7 @@ export async function updateTag({
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/tags");
+    revalidate("/", "/tags");
     return { success: true, data: tag };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -727,8 +858,7 @@ export async function deleteTag(id: string) {
   try {
     await db.tag.delete({ where: { id } });
 
-    revalidatePath("/");
-    revalidatePath("/tags");
+    revalidate("/", "/tags");
     return { success: true };
   } catch (error) {
     console.error("Error deleting tag:", error);
@@ -782,11 +912,120 @@ export async function mergeTag({
 
     await db.tag.delete({ where: { id: sourceId } });
 
-    revalidatePath("/");
-    revalidatePath("/tags");
+    revalidate("/", "/tags");
     return { success: true };
   } catch (error) {
     console.error("Error merging tags:", error);
+    return { success: false, error: "Failed to merge tags" };
+  }
+}
+
+/**
+ * Delete several tags at once, unlinking them from every accomplishment.
+ *
+ * The AccomplishmentTag.tagId FK is ON DELETE CASCADE, so dropping the Tag rows
+ * removes the join rows for us — no per-tag cleanup loop needed.
+ *
+ * Tags only. Category is onDelete: Restrict, so the equivalent deleteMany over
+ * categories would throw on the first one in use and roll back the whole batch.
+ */
+export async function deleteTags(ids: string[]) {
+  const targetIds = [...new Set(ids)].filter(Boolean);
+  if (targetIds.length === 0) {
+    return { success: true, deleted: 0 };
+  }
+
+  try {
+    const result = await db.tag.deleteMany({ where: { id: { in: targetIds } } });
+
+    revalidate("/", "/tags");
+    return { success: true, deleted: result.count };
+  } catch (error) {
+    console.error("Error deleting tags:", error);
+    return { success: false, error: "Failed to delete tags" };
+  }
+}
+
+/**
+ * Merge several tags into one survivor, then delete the sources.
+ *
+ * Batched rather than a loop over mergeTag, because collapsing many sources at
+ * once has a failure mode the single-source version can't hit. Given
+ * @@unique([accomplishmentId, tagId]), a bare
+ * `updateMany({ where: { tagId: { in: sourceIds } } })` breaks as soon as two
+ * sources sit on the SAME accomplishment — which is common here (one entry
+ * carries SDCC + Convention + SDCC experience + Panels). So we dedupe on two
+ * axes: against links the target already has, AND against links earlier in this
+ * same batch. mergeTag avoids the second case only because it re-queries
+ * committed state per link, one source at a time.
+ */
+export async function mergeTags({
+  sourceIds,
+  targetId,
+}: {
+  sourceIds: string[];
+  targetId: string;
+}) {
+  // Merging the target into itself would delete it; drop it from the sources.
+  const sources = [...new Set(sourceIds)].filter((id) => id && id !== targetId);
+  if (sources.length === 0) {
+    return { success: false, error: "No tags to merge" };
+  }
+
+  try {
+    const target = await db.tag.findUnique({ where: { id: targetId } });
+    if (!target) {
+      return { success: false, error: "Target tag not found" };
+    }
+
+    const counts = await db.$transaction(async (tx) => {
+      const sourceLinks = await tx.accomplishmentTag.findMany({
+        where: { tagId: { in: sources } },
+      });
+      const targetLinks = await tx.accomplishmentTag.findMany({
+        where: { tagId: targetId },
+        select: { accomplishmentId: true },
+      });
+
+      // Accomplishments already carrying the target. Grows as we go, so the
+      // second and later sources on one accomplishment collapse instead of
+      // colliding.
+      const tagged = new Set(targetLinks.map((l) => l.accomplishmentId));
+      const toRepoint: string[] = [];
+      const toDrop: string[] = [];
+
+      for (const link of sourceLinks) {
+        if (tagged.has(link.accomplishmentId)) {
+          toDrop.push(link.id);
+        } else {
+          tagged.add(link.accomplishmentId);
+          toRepoint.push(link.id);
+        }
+      }
+
+      if (toDrop.length > 0) {
+        await tx.accomplishmentTag.deleteMany({ where: { id: { in: toDrop } } });
+      }
+      if (toRepoint.length > 0) {
+        await tx.accomplishmentTag.updateMany({
+          where: { id: { in: toRepoint } },
+          data: { tagId: targetId },
+        });
+      }
+      await tx.tag.deleteMany({ where: { id: { in: sources } } });
+
+      return { merged: toRepoint.length, duplicatesDropped: toDrop.length };
+    });
+
+    revalidate("/", "/tags");
+    return {
+      success: true,
+      targetName: target.name,
+      tagsDeleted: sources.length,
+      ...counts,
+    };
+  } catch (error) {
+    console.error("Error bulk-merging tags:", error);
     return { success: false, error: "Failed to merge tags" };
   }
 }

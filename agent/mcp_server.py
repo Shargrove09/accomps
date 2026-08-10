@@ -28,17 +28,21 @@ mcp = FastMCP(
         "accomplishment. When a message is NOT a new accomplishment, respond to that "
         "message on its own — do NOT restate, re-confirm, or echo an accomplishment "
         "from an earlier turn unless the user explicitly asks about it.\n\n"
-        "TAGS & CATEGORIES: Reuse existing categories and tags for consistency — call "
-        "list_categories / list_tags when unsure, and prefer an existing name over a "
-        "new variant. Introducing a new CATEGORY requires the user's confirmation "
-        "(add_accomplishment will tell you when and how)."
+        "TAGS: Reuse existing tags for consistency — call list_tags when unsure, and "
+        "prefer an existing name over a new variant.\n\n"
+        "CATEGORIES ARE A CLOSED SET. add_accomplishment and update_accomplishment "
+        "will NEVER create a category; if the one you pass doesn't exist they save "
+        "nothing and say so. When that happens, ASK THE USER which existing category "
+        "to use. Only if the user explicitly wants a new category should you call "
+        "create_category — never call it on your own initiative to get a blocked "
+        "write to go through."
     ),
 )
 
 
 @mcp.tool()
 def add_accomplishment(
-    title: str, category: str, tags: str, description: str = "", create_new_category: bool = False
+    title: str, category: str, tags: str, description: str = ""
 ) -> str:
     """Record a new accomplishment described in the user's CURRENT message. `tags` is a
     comma-separated string. Reuse existing categories/tags (call list_categories /
@@ -46,16 +50,16 @@ def add_accomplishment(
     this is a new accomplishment and the user gave no description, generate a concise
     one-sentence description from the title/context.
 
-    Leave `create_new_category=False` by default. If the category isn't an existing one,
-    this tool returns WITHOUT saving and tells you to confirm creating it with the user;
-    only after they confirm, call again with create_new_category=True."""
+    `category` must ALREADY EXIST — this tool never creates one. Close variants (case,
+    plurals, small typos) snap to the existing category automatically. If it matches
+    nothing, this returns WITHOUT saving and you must ask the user which category to
+    use."""
     return accomps_tools.add_accomplishment.invoke(
         {
             "title": title,
             "category": category,
             "tags": tags,
             "description": description,
-            "create_new_category": create_new_category,
         }
     )
 
@@ -107,10 +111,24 @@ def list_categories() -> str:
 
 
 @mcp.tool()
+def create_category(name: str, description: str = "") -> str:
+    """Add a NEW category to the tracker's taxonomy. Separate from add_accomplishment
+    on purpose: recording an accomplishment never creates a category, so this is the
+    single deliberate act that grows the set — and the user gets to see and approve it
+    as its own step.
+
+    ONLY call this when the user explicitly asked for a new category, or agreed to one
+    you proposed by name. Do NOT call it to unblock a refused add_accomplishment — ask
+    the user instead. Categories cannot be deleted once used, only merged."""
+    return accomps_tools.create_category.invoke({"name": name, "description": description})
+
+
+@mcp.tool()
 def update_accomplishment(
     accomplishment_id: str, title: str = "", category: str = "", tags: str = "", description: str = ""
 ) -> str:
-    """Update an existing accomplishment by id. Only non-empty fields are changed."""
+    """Update an existing accomplishment by id. Only non-empty fields are changed.
+    As with add_accomplishment, `category` must already exist — this never creates one."""
     return accomps_tools.update_accomplishment.invoke(
         {
             "accomplishment_id": accomplishment_id,

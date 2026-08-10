@@ -24,3 +24,25 @@ export function jsonError(
   }
   return NextResponse.json(body, { status });
 }
+
+/**
+ * Machine-readable code returned when a write names a category that doesn't
+ * exist and the caller isn't allowed to create one. Callers (the Python agent)
+ * branch on this to prompt the user rather than retrying blindly.
+ */
+export const UNKNOWN_CATEGORY = "UNKNOWN_CATEGORY";
+
+/**
+ * 409 for a write that named a category outside the existing set. Carries the
+ * full category list — it's small, and it saves the agent a second round trip
+ * to `list_categories` before it can suggest alternatives.
+ */
+export function jsonUnknownCategory(
+  message: string,
+  availableCategories: string[],
+): NextResponse {
+  return NextResponse.json(
+    { error: message, code: UNKNOWN_CATEGORY, availableCategories },
+    { status: 409 },
+  );
+}

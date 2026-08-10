@@ -11,6 +11,8 @@ import {
   updateTag,
   deleteTag,
   mergeTag,
+  deleteTags,
+  mergeTags,
 } from "@/lib/actions";
 
 export type ManagedItem = {
@@ -45,11 +47,36 @@ export function CategoryTagManager({
 }) {
   const [editing, setEditing] = useState<ManagedItem | null>(null);
   const [deleting, setDeleting] = useState<ManagedItem | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState<"delete" | "merge" | null>(null);
 
   const label = kind === "category" ? "Category" : "Tag";
 
+  // Bulk actions are tag-only: Category is onDelete: Restrict, so a bulk delete
+  // would throw on the first category in use and roll back the whole batch.
+  const bulkEnabled = kind === "tag";
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  const selectedItems = items.filter((i) => selected.has(i.id));
+
   return (
     <>
+      {bulkEnabled && (
+        <BulkActionBar
+          items={items}
+          selected={selected}
+          setSelected={setSelected}
+          onDelete={() => setBulkMode("delete")}
+          onMerge={() => setBulkMode("merge")}
+        />
+      )}
+
       {items.length === 0 ? (
         <p className="text-center text-kimberly">
           No {label.toLowerCase()}s yet.
@@ -59,8 +86,26 @@ export function CategoryTagManager({
           {items.map((item) => (
             <div
               key={item.id}
-              className="bg-ebony-clay rounded-lg shadow-sm border border-kimberly p-6 text-center hover:border-blue-600 transition-colors group relative"
+              className={`bg-ebony-clay rounded-lg shadow-sm border p-6 text-center transition-colors group relative ${
+                selected.has(item.id)
+                  ? "border-blue-500 ring-1 ring-blue-500"
+                  : "border-kimberly hover:border-blue-600"
+              }`}
             >
+              {bulkEnabled && (
+                // Always visible, unlike the hover-revealed actions — otherwise
+                // there's no way to discover that bulk selection exists.
+                <label className="absolute top-2 left-2 flex items-center cursor-pointer p-1.5">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(item.id)}
+                    onChange={() => toggle(item.id)}
+                    aria-label={`Select ${item.name}`}
+                    className="h-4 w-4 rounded border-kimberly bg-east-bay text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                </label>
+              )}
+
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => setEditing(item)}
@@ -127,7 +172,238 @@ export function CategoryTagManager({
           onClose={() => setDeleting(null)}
         />
       )}
+
+      {bulkMode && selectedItems.length > 0 && (
+        <BulkActionDialog
+          mode={bulkMode}
+          items={selectedItems}
+          targets={items.filter((i) => !selected.has(i.id))}
+          onClose={() => setBulkMode(null)}
+          onDone={() => {
+            setBulkMode(null);
+            setSelected(new Set());
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function BulkActionBar({
+  items,
+  selected,
+  setSelected,
+  onDelete,
+  onMerge,
+}: {
+  items: ManagedItem[];
+  selected: Set<string>;
+  setSelected: (s: Set<string>) => void;
+  onDelete: () => void;
+  onMerge: () => void;
+}) {
+  const count = selected.size;
+  // Shortcuts for the two shapes that actually need bulk treatment: one-off
+  // noise, and tags nothing points at.
+  const usedOnce = items.filter((i) => i.count === 1);
+  const unused = items.filter((i) => i.count === 0);
+
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-kimberly bg-ebony-clay px-4 py-3">
+      <span className="text-sm text-mischka">
+        {count > 0 ? (
+          <>
+            <strong>{count}</strong> tag{count !== 1 ? "s" : ""} selected
+          </>
+        ) : (
+          "Select tags to delete or merge them in bulk"
+        )}
+      </span>
+
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {unused.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelected(new Set(unused.map((i) => i.id)))}
+            className="px-3 py-1.5 text-sm rounded-md border border-kimberly text-mischka hover:bg-east-bay transition-colors hover:cursor-pointer"
+          >
+            Select unused ({unused.length})
+          </button>
+        )}
+        {usedOnce.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelected(new Set(usedOnce.map((i) => i.id)))}
+            className="px-3 py-1.5 text-sm rounded-md border border-kimberly text-mischka hover:bg-east-bay transition-colors hover:cursor-pointer"
+          >
+            Select used once ({usedOnce.length})
+          </button>
+        )}
+        {count > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="px-3 py-1.5 text-sm rounded-md border border-kimberly text-mischka hover:bg-east-bay transition-colors hover:cursor-pointer"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={onMerge}
+              className="px-3 py-1.5 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors hover:cursor-pointer"
+            >
+              Merge into...
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="px-3 py-1.5 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition-colors hover:cursor-pointer"
+            >
+              Delete selected
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BulkActionDialog({
+  mode,
+  items,
+  targets,
+  onClose,
+  onDone,
+}: {
+  mode: "delete" | "merge";
+  items: ManagedItem[];
+  /** Candidate merge survivors — the unselected tags. */
+  targets: ManagedItem[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [targetId, setTargetId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const ids = items.map((i) => i.id);
+  const linkCount = items.reduce((sum, i) => sum + i.count, 0);
+
+  const handleConfirm = () => {
+    setError(null);
+    startTransition(async () => {
+      const result =
+        mode === "merge"
+          ? await mergeTags({ sourceIds: ids, targetId })
+          : await deleteTags(ids);
+      if (result.success) {
+        router.refresh();
+        onDone();
+      } else {
+        setError(result.error ?? "Operation failed");
+      }
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {mode === "merge" ? "Merge" : "Delete"} {items.length} tag
+            {items.length !== 1 ? "s" : ""}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="px-6 py-4 space-y-4">
+          <div className="max-h-32 overflow-y-auto rounded border border-gray-200 bg-gray-50 px-3 py-2">
+            <p className="text-sm text-gray-700">
+              {items.map((i) => i.name).join(", ")}
+            </p>
+          </div>
+
+          {mode === "merge" ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Merge into (required)
+                </label>
+                <select
+                  value={targetId}
+                  onChange={(e) => setTargetId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                >
+                  <option value="">Select a target...</option>
+                  {targets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* No summed total here on purpose: an accomplishment carrying
+                  several of the selected tags collapses to a single link, so
+                  adding up the counts would overstate the result. */}
+              <p className="text-sm text-gray-600">
+                The target will be applied to every accomplishment that had any
+                of these tags; duplicates collapse. The {items.length} merged tag
+                {items.length !== 1 ? "s" : ""} will then be deleted.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-600">
+              {linkCount > 0 ? (
+                <>
+                  These tags will be removed from the accomplishments carrying
+                  them ({linkCount} link{linkCount !== 1 ? "s" : ""} in total).
+                  The accomplishments themselves are not deleted.
+                </>
+              ) : (
+                <>None of these tags are in use.</>
+              )}{" "}
+              This cannot be undone.
+            </p>
+          )}
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
+
+        <div className="px-6 py-4 bg-gray-50 flex gap-3 justify-end rounded-b-lg">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={isPending || (mode === "merge" && !targetId)}
+            className={`px-4 py-2 rounded-md text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+              mode === "merge"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-red-600 hover:bg-red-700"
+            }`}
+          >
+            {isPending
+              ? "Working..."
+              : mode === "merge"
+                ? "Merge & Delete"
+                : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

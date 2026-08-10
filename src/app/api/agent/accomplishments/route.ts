@@ -3,7 +3,11 @@ import { addAccomplishment } from "@/lib/actions";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { validateAgentApiKey } from "@/lib/api-auth";
-import { jsonError } from "@/lib/api-response";
+import {
+  jsonError,
+  jsonUnknownCategory,
+  UNKNOWN_CATEGORY,
+} from "@/lib/api-response";
 import { parsePagination } from "@/lib/pagination";
 
 // Mark this route as dynamic to prevent static evaluation during build
@@ -24,6 +28,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // No allowNewCategory: the agent API can never mint a category as a side
+    // effect of recording an accomplishment. New categories go through
+    // POST /api/agent/categories, which is a separate, deliberate call.
     const result = await addAccomplishment({
       title,
       description,
@@ -34,6 +41,12 @@ export async function POST(request: Request) {
     // addAccomplishment returns { success: false, error } on validation/DB
     // failure — surface that as a 400 instead of a misleading 200.
     if (!result.success) {
+      if (result.code === UNKNOWN_CATEGORY) {
+        return jsonUnknownCategory(
+          result.error ?? `Unknown category '${category}'`,
+          result.availableCategories ?? []
+        );
+      }
       return jsonError(result.error ?? "Failed to add accomplishment", 400);
     }
 

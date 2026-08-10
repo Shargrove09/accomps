@@ -6,6 +6,13 @@ import string
 # Similarity cutoff for snapping a proposed tag/category onto an existing one.
 # 0.82 catches case/plural/spacing variants and small typos without collapsing
 # genuinely distinct words together.
+#
+# Categories deliberately keep this STRICTER cutoff rather than the looser tag
+# one below. The two fields fail differently: a wrong tag is a slightly-off
+# label on an entry that is otherwise filed correctly, while a wrong category
+# silently misfiles the entry itself — and a category can't be deleted once
+# anything points at it (onDelete: Restrict), only merged. For categories,
+# refusing and asking beats snapping onto a near-match and being wrong.
 _FUZZY_CUTOFF = 0.82
 
 # Tags use a LOOSER cutoff than categories: we want near-variants to snap onto an
@@ -61,6 +68,65 @@ def _suggest_existing(name: str, existing: list, limit: int = 3) -> list:
         _norm_key(name), list(norm_to_canonical), n=limit, cutoff=0.4
     )
     return [norm_to_canonical[k] for k in close]
+
+
+def resolve_category(category: str, existing_categories: list) -> dict:
+    """Resolve a proposed category name against the existing set.
+
+    Categories are a CLOSED SET: this never invents one. It either snaps the
+    proposal onto an existing category (case/plural/spacing/typo variants
+    included) or reports it as new so the caller can stop and ask the user.
+    Creating a category is a separate, deliberate act — see the create_category
+    tool — not a side effect of recording an accomplishment.
+
+    Returns:
+        dict with keys:
+        - name (str): the canonical existing category when matched, otherwise
+          the proposal as given (NOT re-cased — don't canonicalize a name that
+          isn't going to be created).
+        - is_new (bool): True when nothing existing matched.
+        - suggestions (list): closest existing categories, best first.
+    """
+    category = category.strip()
+    if not category:
+        return {"name": "", "is_new": False, "suggestions": []}
+
+    matched = _match_existing(category, existing_categories)
+    if matched:
+        return {"name": matched, "is_new": False, "suggestions": []}
+
+    # No categories exist yet — nothing to gate against, so let the first one
+    # through to bootstrap the list rather than deadlocking an empty tracker.
+    if not existing_categories:
+        return {
+            "name": string.capwords(category) if category.islower() else category,
+            "is_new": False,
+            "suggestions": [],
+        }
+
+    return {
+        "name": category,
+        "is_new": True,
+        "suggestions": _suggest_existing(category, existing_categories),
+    }
+
+
+def unknown_category_message(name: str, suggestions: list, existing: list) -> str:
+    """The refusal returned when a tool is handed a category outside the set.
+
+    Deliberately does NOT offer the model a way to force the write through —
+    the only path forward is create_category, and only after the user asks.
+    """
+    options = suggestions or existing
+    lines = [f"'{name}' is not an existing category, and nothing was saved."]
+    if options:
+        lines.append("Closest existing categories: " + ", ".join(f"'{c}'" for c in options) + ".")
+    lines.append(
+        "Ask the user which existing category to use. Only if they explicitly want a "
+        f"NEW category '{name}' should you call create_category, then retry. "
+        "Never call create_category on your own initiative."
+    )
+    return " ".join(lines)
 
 
 def fetch_all_tags(api_url: str, api_key: str) -> list:
@@ -135,9 +201,10 @@ def normalize_accomplishment_fields(
     
     Returns:
         dict: Normalized fields with keys: title, category, tags (list), description,
-            plus metadata for the new-category confirmation gate:
+            plus metadata for the closed-set category gate:
             - category_is_new (bool): True when the category matched no existing one
-              (and existing categories were available to match against).
+              (and existing categories were available to match against). The caller
+              must refuse the write when this is True — see unknown_category_message.
             - category_suggestions (list): closest existing categories, best first.
             - existing_categories (list): all existing categories, for context.
     """
@@ -155,24 +222,12 @@ def normalize_accomplishment_fields(
     if description and not description[0].isupper():
         description = description[0].upper() + description[1:]
 
-    # Normalize category. Snap onto an existing category (case/plural/spacing/typo
-    # variants included). If none matches, flag it as new so the caller can confirm
-    # with the user before it gets created. When there are no existing categories to
-    # match against, don't gate — let the first one through to bootstrap the list.
-    category = category.strip()
-    category_is_new = False
-    category_suggestions = []
-    if category:
-        matched_category = _match_existing(category, existing_categories)
-        if matched_category:
-            category = matched_category
-        elif existing_categories:
-            category_is_new = True
-            category_suggestions = _suggest_existing(category, existing_categories)
-            if category.islower():
-                category = string.capwords(category)
-        elif category.islower():
-            category = string.capwords(category)
+    # Resolve the category against the closed set. Never invents one — an
+    # unmatched proposal comes back flagged so the caller refuses the write.
+    resolved_category = resolve_category(category, existing_categories)
+    category = resolved_category["name"]
+    category_is_new = resolved_category["is_new"]
+    category_suggestions = resolved_category["suggestions"]
 
     # Parse and normalize tags with a strong bias toward existing tags:
     #   1. Snap each proposed tag onto an existing one using the looser tag cutoff.

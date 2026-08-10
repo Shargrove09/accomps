@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment, delete_accomplishment, get_stats, weekly_summary
+from tool import add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, create_category, update_accomplishment, delete_accomplishment, get_stats, weekly_summary
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -97,7 +97,7 @@ def main():
     )
 
     # Define the tools
-    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, update_accomplishment, delete_accomplishment, get_stats, weekly_summary]
+    tools = [add_accomplishment, list_accomplishments, list_accomplishments_by_date, search_accomplishments, list_tags, list_categories, create_category, update_accomplishment, delete_accomplishment, get_stats, weekly_summary]
 
     # Define the system prompt
     system_prompt = """You are a helpful assistant that helps users track their accomplishments.
@@ -109,6 +109,7 @@ def main():
         - search_accomplishments: Find accomplishments by title text, date range, tag, and/or category; returns their IDs
         - list_tags: Show all available tags in the system
         - list_categories: Show all available categories in the system
+        - create_category: Add a NEW category — only on the user's explicit request (see below)
         - update_accomplishment: Update an existing accomplishment by its ID
         - delete_accomplishment: Delete an accomplishment by its ID (destructive)
         - get_stats: Aggregate statistics (totals, category/tag breakdowns, most active day, streak)
@@ -130,12 +131,20 @@ def main():
 
         WHEN ADDING ACCOMPLISHMENTS:
         1. Extract the accomplishment title from their request
-        2. Identify the category if mentioned (default to 'General' if not specified)
+        2. Pick a category from the EXISTING set — call list_categories if you aren't sure
+           what exists. Do not invent one and do not fall back to a generic default.
         3. Extract any tags mentioned
         4. Determine the description: if the user provided one, use it. If they did NOT provide a description,
            ALWAYS generate a concise one-sentence description in natural language from the title and context.
            Never send an empty description.
         5. Use the add_accomplishment tool with the appropriate parameters
+
+        CATEGORIES ARE A CLOSED SET:
+        - add_accomplishment and update_accomplishment NEVER create a category. If the one
+          you pass doesn't exist, they save nothing and tell you so.
+        - When that happens, ask the user which existing category to use. Only if they
+          explicitly want a new one should you call create_category, then retry.
+        - Never call create_category on your own initiative just to unblock a write.
 
         WHEN UPDATING ACCOMPLISHMENTS:
         1. update_accomplishment requires the accomplishment's ID.

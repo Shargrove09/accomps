@@ -1,28 +1,60 @@
 import os
 import requests
+import string
 from langchain.tools import tool
-from tool_helpers import fetch_all_tags, fetch_all_categories, normalize_accomplishment_fields
+from tool_helpers import (
+    fetch_all_tags,
+    fetch_all_categories,
+    normalize_accomplishment_fields,
+    resolve_category,
+    unknown_category_message,
+)
 
+
+def _category_error(response) -> str | None:
+    """Render the server's 409 closed-set refusal, or None if it isn't one.
+
+    The server enforces the same rule independently of this module, so a write
+    can still be refused even when local matching thought the category was fine
+    (e.g. it was deleted between the fetch and the write).
+    """
+    try:
+        body = response.json()
+    except Exception:
+        return None
+    if body.get("code") != "UNKNOWN_CATEGORY":
+        return None
+    available = body.get("availableCategories") or []
+    message = body.get("error", "Unknown category")
+    if available:
+        return (
+            f"{message}. Nothing was saved. Existing categories: "
+            + ", ".join(f"'{c}'" for c in available)
+            + ". Ask the user which one to use, or whether they want a new category created."
+        )
+    return f"{message}. Nothing was saved."
 
 
 @tool
 def add_accomplishment(
-    title: str, category: str, tags: str, description: str = "", create_new_category: bool = False
+    title: str, category: str, tags: str, description: str = ""
 ) -> str:
     """
     Adds a new accomplishment to the tracker.
 
+    The category must be one that ALREADY EXISTS — this tool never creates one.
+    Call list_categories if you are unsure what exists. If the category you pass
+    matches nothing, this tool saves nothing and tells you to ask the user.
+
     Args:
         title (str): The title of the accomplishment. Must be a clear, concise summary, corrected for typos and grammar.
-        category (str): The category for the accomplishment (e.g., 'Work', 'Learning', 'Personal').
-            Reuse an existing category whenever possible — call list_categories if unsure.
+        category (str): An EXISTING category for the accomplishment (e.g., 'Work', 'Learning', 'Personal').
+            Call list_categories if unsure. Close variants (case, plurals, small typos) snap
+            automatically to the existing category, so don't worry about exact spelling.
         tags (str): Comma-separated tags to associate with the accomplishment (e.g., 'release,deployment').
         description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar.
             If the user did not provide a description, generate a concise one-sentence description
             in natural language from the title and context before calling this tool — do not leave it blank.
-        create_new_category (bool, optional): Leave False by default. If the category does not match an
-            existing one, this tool returns without saving and asks you to confirm creating a new category.
-            Only after the user confirms should you call again with create_new_category=True.
 
     Returns:
         str: A message indicating success or failure of the operation.
@@ -48,20 +80,14 @@ def add_accomplishment(
         api_key=api_key
     )
 
-    # Confirm-gate: don't silently create a brand-new category. Ask the user first.
-    if normalized["category_is_new"] and not create_new_category:
-        suggestions = normalized["category_suggestions"] or normalized["existing_categories"]
-        if suggestions:
-            options = ", ".join(f"'{c}'" for c in suggestions)
-            return (
-                f"'{normalized['category']}' isn't an existing category. "
-                f"Closest existing categories: {options}. Ask the user whether to use one of "
-                f"those instead, or to confirm creating the new category '{normalized['category']}'. "
-                f"To create it, call add_accomplishment again with create_new_category=True."
-            )
-        return (
-            f"'{normalized['category']}' isn't an existing category. Ask the user to confirm "
-            f"creating it, then call add_accomplishment again with create_new_category=True."
+    # Closed set: refuse rather than create. There is deliberately no parameter
+    # that lets the caller force this through — creating a category is its own
+    # tool call, so the user sees and approves it as a distinct action.
+    if normalized["category_is_new"]:
+        return unknown_category_message(
+            normalized["category"],
+            normalized["category_suggestions"],
+            normalized["existing_categories"],
         )
 
     payload = {
@@ -79,6 +105,11 @@ def add_accomplishment(
         return f"Successfully added accomplishment: '{normalized['title']}'. Response: {response_data.get('message')}"
 
     except requests.exceptions.HTTPError as http_err:
+        # The server enforces the closed category set too — a 409 means it
+        # refused the write, not that something broke.
+        category_error = _category_error(response)
+        if category_error:
+            return category_error
         # Surface the server's JSON error message (e.g. validation failures return
         # {"error": "..."} with a 400) instead of a raw stack/status.
         try:
@@ -500,21 +531,97 @@ def list_categories() -> str:
     
     if not categories:
         return "No categories found or error fetching categories."
-        
+
     return f"Available categories ({len(categories)}): {', '.join(categories)}"
+
+@tool
+def create_category(name: str, description: str = "") -> str:
+    """
+    Creates a NEW category in the tracker. This changes the shared taxonomy that every
+    accomplishment is filed under, so use it sparingly.
+
+    ONLY call this when the user has explicitly asked for a new category, or has agreed
+    to one you proposed by name. Never call it on your own initiative to make an
+    add_accomplishment or update_accomplishment call succeed — if those tools refused a
+    category, the correct next step is to ASK THE USER, not to create it.
+
+    Prefer an existing category: call list_categories first and reuse one if it fits.
+    A category cannot be deleted once accomplishments are filed under it, only merged.
+
+    Args:
+        name (str): The new category name. Keep it short and general (a bucket, not a topic).
+        description (str, optional): A brief description of what belongs in this category.
+
+    Returns:
+        str: A message indicating success or failure of the operation.
+    """
+    api_url = os.getenv("ACCOMPLISHMENT_API_URL")
+    api_key = os.getenv("AGENT_API_KEY")
+
+    if not api_url or not api_key:
+        return "Error: API URL or API Key is not configured. Please check your .env file."
+
+    if not name or not name.strip():
+        return "Error: A category name is required."
+
+    name = string.capwords(name.strip()) if name.strip().islower() else name.strip()
+
+    if "/accomplishments" in api_url:
+        categories_url = api_url.replace("/accomplishments", "/categories")
+    else:
+        categories_url = f"{api_url.rsplit('/', 1)[0]}/categories"
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+    }
+    payload = {"name": name}
+    if description.strip():
+        payload["description"] = description.strip()
+
+    try:
+        response = requests.post(categories_url, json=payload, headers=headers)
+        if response.status_code == 409:
+            # Already there under a different casing — reuse it rather than
+            # reporting failure; the user's intent is satisfied either way.
+            existing = response.json().get("existingCategory", name)
+            return (
+                f"Category '{existing}' already exists — no new category was created. "
+                f"Use '{existing}' for the accomplishment."
+            )
+        response.raise_for_status()
+        return (
+            f"Created the category '{name}'. You can now record the accomplishment "
+            f"under it."
+        )
+    except requests.exceptions.HTTPError as http_err:
+        try:
+            server_error = response.json().get("error")
+        except Exception:
+            server_error = None
+        if server_error:
+            return f"Error ({response.status_code}): {server_error}"
+        return f"HTTP error occurred: {http_err}. Response: {response.text}"
+    except requests.exceptions.RequestException as req_err:
+        return f"An error occurred with the request: {req_err}"
+    except Exception as e:
+        return f"An unexpected error occurred: {e}"
 
 @tool
 def update_accomplishment(accomplishment_id: str, title: str = "", category: str = "", tags: str = "", description: str = "") -> str:
     """
     Updates an existing accomplishment in the tracker.
 
+    As with add_accomplishment, the category must ALREADY EXIST — this tool never
+    creates one.
+
     Args:
         accomplishment_id (str): The unique identifier of the accomplishment to update.
         title (str, optional): The new title of the accomplishment. Defaults to "".
-        category (str, optional): The new category for the accomplishment. Defaults to "".
+        category (str, optional): An EXISTING category to move the accomplishment to. Defaults to "".
         tags (str, optional): Comma-separated new tags to associate with the accomplishment. Defaults to "".
         description (str, optional): A new detailed description of the accomplishment. Defaults to "".
-    
+
     Returns:
         str: A message indicating success or failure of the operation.
     """
@@ -529,6 +636,17 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
         "Content-Type": "application/json",
         "x-api-key": api_key,
     }
+
+    # Same closed-set gate as add_accomplishment — an edit must not be a back
+    # door for minting categories.
+    if category:
+        existing_categories = fetch_all_categories(api_url, api_key)
+        resolved = resolve_category(category, existing_categories)
+        if resolved["is_new"]:
+            return unknown_category_message(
+                resolved["name"], resolved["suggestions"], existing_categories
+            )
+        category = resolved["name"]
 
     payload = {}
     if title:
@@ -553,8 +671,10 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
             return "Error: Authentication failed. The API key may be invalid."
         elif status_code == 404:
             return f"Error: Accomplishment with ID {accomplishment_id} not found."
-        else:
-            return f"HTTP error {status_code}: {http_err}. Response: {response.text}"
+        category_error = _category_error(response)
+        if category_error:
+            return category_error
+        return f"HTTP error {status_code}: {http_err}. Response: {response.text}"
     except requests.exceptions.ConnectionError:
         return "Error: Could not connect to the API. Is the server running?"
     except requests.exceptions.RequestException as req_err:

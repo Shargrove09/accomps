@@ -123,6 +123,8 @@ export function EditAccomplishmentForm({
         category: category.trim(),
         tags: tagNames,
         ...(date && { date: new Date(date) }),
+        // Deliberate human choice in the UI — see add-accomplishment-form.
+        allowNewCategory: true,
       });
 
       if (result.success && result.data) {
