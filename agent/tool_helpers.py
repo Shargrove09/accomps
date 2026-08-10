@@ -17,9 +17,21 @@ _FUZZY_CUTOFF = 0.82
 
 # Tags use a LOOSER cutoff than categories: we want near-variants to snap onto an
 # existing tag aggressively so the tag list doesn't sprout a new entry per
-# accomplishment. Combined with the prefer-existing rule in the tag loop below,
-# a new tag is only minted when nothing existing reasonably fits.
+# accomplishment.
 _TAG_FUZZY_CUTOFF = 0.70
+
+# How many genuinely-new tags one accomplishment may introduce.
+#
+# Tags are meant to proliferate more freely than categories, so the brake is a
+# budget rather than a closed set. Two is enough to name a genuinely novel topic
+# ("kubernetes", "helm") while stopping a ten-tag brainstorm from adding ten rows
+# — which is how a 60-entry tracker ended up with 91 tags, 61 of them used once.
+#
+# This replaces an earlier all-or-nothing rule (keep matched tags, drop every new
+# one; but if NOTHING matched, let them all through). That was backwards: it
+# braked hardest when good existing tags were already available, and not at all
+# when the model was inventing from scratch. A flat budget applies in both cases.
+_MAX_NEW_TAGS = 2
 
 
 def _norm_key(name: str) -> str:
@@ -109,6 +121,56 @@ def resolve_category(category: str, existing_categories: list) -> dict:
         "is_new": True,
         "suggestions": _suggest_existing(category, existing_categories),
     }
+
+
+def resolve_tags(tags: str, existing_tags: list) -> dict:
+    """Resolve a comma-separated tag string against the existing tag vocabulary.
+
+    Unlike categories, tags may still be created — but only on a budget. Each
+    proposal either snaps onto an existing tag (case/plural/typo variants
+    included) or counts against _MAX_NEW_TAGS; proposals past the budget are
+    dropped and reported, never silently discarded.
+
+    Returns:
+        dict with keys:
+        - tags (list): the tags to save, matched ones first, de-duplicated.
+        - dropped (list): new tags refused by the budget, so the caller can say so.
+        - matched (list) / created (list): the accepted split, for messaging.
+    """
+    proposals = [tag.strip() for tag in tags.split(",") if tag.strip()]
+
+    matched = []  # snapped onto an existing tag
+    new = []      # nothing existing fits
+    for tag in proposals:
+        existing_match = _match_existing(tag, existing_tags, cutoff=_TAG_FUZZY_CUTOFF)
+        if existing_match:
+            matched.append(existing_match)
+        else:
+            new.append(string.capwords(tag) if tag.islower() else tag)
+
+    # Bootstrap: with no vocabulary yet, nothing can match, so a budget would
+    # cripple the first few entries. Let them all through to seed the list —
+    # mirrors the same exemption in resolve_category.
+    budget = len(new) if not existing_tags else _MAX_NEW_TAGS
+    created, dropped = new[:budget], new[budget:]
+
+    # De-duplicate while preserving order (two proposals can snap to one tag).
+    seen = set()
+    chosen = [t for t in matched + created if not (t in seen or seen.add(t))]
+
+    return {"tags": chosen, "dropped": dropped, "matched": matched, "created": created}
+
+
+def dropped_tags_note(dropped: list) -> str:
+    """Trailing sentence for a save that hit the new-tag budget. Empty when it didn't."""
+    if not dropped:
+        return ""
+    names = ", ".join(f"'{t}'" for t in dropped)
+    return (
+        f" Note: skipped {len(dropped)} new tag(s) — {names} — because an accomplishment "
+        f"may introduce at most {_MAX_NEW_TAGS} new tag(s). Tell the user, and if one of "
+        f"those matters, suggest an existing tag (list_tags) or re-save with fewer new ones."
+    )
 
 
 def unknown_category_message(name: str, suggestions: list, existing: list) -> str:
@@ -201,7 +263,10 @@ def normalize_accomplishment_fields(
     
     Returns:
         dict: Normalized fields with keys: title, category, tags (list), description,
-            plus metadata for the closed-set category gate:
+            plus:
+            - dropped_tags (list): new tags refused by the _MAX_NEW_TAGS budget. The
+              save still proceeds; report these with dropped_tags_note.
+            and metadata for the closed-set category gate:
             - category_is_new (bool): True when the category matched no existing one
               (and existing categories were available to match against). The caller
               must refuse the write when this is True — see unknown_category_message.
@@ -229,35 +294,16 @@ def normalize_accomplishment_fields(
     category_is_new = resolved_category["is_new"]
     category_suggestions = resolved_category["suggestions"]
 
-    # Parse and normalize tags with a strong bias toward existing tags:
-    #   1. Snap each proposed tag onto an existing one using the looser tag cutoff.
-    #   2. Prefer-existing: if ANY proposed tag matched an existing tag, keep only the
-    #      matched ones and DROP the unmatched (would-be-new) proposals — don't mint a
-    #      new tag when reasonable existing ones already fit.
-    #   3. Only when NOTHING matched (nothing existing fits at all) do we let the new
-    #      tag(s) through, so a fresh concept — or the very first tags — can still be
-    #      created.
-    raw_tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-    matched_tags = []  # snapped onto an existing tag
-    new_tags = []      # no existing tag matched
-    for tag in raw_tags_list:
-        matched_tag = _match_existing(tag, existing_tags, cutoff=_TAG_FUZZY_CUTOFF)
-        if matched_tag:
-            matched_tags.append(matched_tag)
-        else:
-            new_tags.append(string.capwords(tag) if tag.islower() else tag)
-
-    chosen_tags = matched_tags if matched_tags else new_tags
-
-    # De-duplicate while preserving order (two proposals can snap to the same tag).
-    seen = set()
-    tags_list = [t for t in chosen_tags if not (t in seen or seen.add(t))]
+    # Snap tags onto the existing vocabulary, letting at most _MAX_NEW_TAGS
+    # genuinely-new ones through. Overflow comes back in `dropped` to be reported.
+    resolved_tags = resolve_tags(tags, existing_tags)
 
     return {
         "title": title,
         "category": category,
-        "tags": tags_list,
+        "tags": resolved_tags["tags"],
         "description": description,
+        "dropped_tags": resolved_tags["dropped"],
         "category_is_new": category_is_new,
         "category_suggestions": category_suggestions,
         "existing_categories": existing_categories,

@@ -133,7 +133,8 @@ def main():
         1. Extract the accomplishment title from their request
         2. Pick a category from the EXISTING set — call list_categories if you aren't sure
            what exists. Do not invent one and do not fall back to a generic default.
-        3. Extract any tags mentioned
+        3. Extract any tags mentioned. Prefer existing tags (list_tags) — an accomplishment
+           may introduce at most 2 genuinely-new tags, and extras are skipped and reported.
         4. Determine the description: if the user provided one, use it. If they did NOT provide a description,
            ALWAYS generate a concise one-sentence description in natural language from the title and context.
            Never send an empty description.

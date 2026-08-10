@@ -7,6 +7,8 @@ from tool_helpers import (
     fetch_all_categories,
     normalize_accomplishment_fields,
     resolve_category,
+    resolve_tags,
+    dropped_tags_note,
     unknown_category_message,
 )
 
@@ -52,6 +54,9 @@ def add_accomplishment(
             Call list_categories if unsure. Close variants (case, plurals, small typos) snap
             automatically to the existing category, so don't worry about exact spelling.
         tags (str): Comma-separated tags to associate with the accomplishment (e.g., 'release,deployment').
+            Prefer EXISTING tags — call list_tags when unsure. Close variants snap to an existing
+            tag automatically. An accomplishment may introduce at most 2 genuinely-new tags; any
+            beyond that are skipped and reported, so put the most important new tags first.
         description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar.
             If the user did not provide a description, generate a concise one-sentence description
             in natural language from the title and context before calling this tool — do not leave it blank.
@@ -102,7 +107,11 @@ def add_accomplishment(
         response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
         
         response_data = response.json()
-        return f"Successfully added accomplishment: '{normalized['title']}'. Response: {response_data.get('message')}"
+        return (
+            f"Successfully added accomplishment: '{normalized['title']}'. "
+            f"Response: {response_data.get('message')}"
+            + dropped_tags_note(normalized["dropped_tags"])
+        )
 
     except requests.exceptions.HTTPError as http_err:
         # The server enforces the closed category set too — a 409 means it
@@ -619,7 +628,8 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
         accomplishment_id (str): The unique identifier of the accomplishment to update.
         title (str, optional): The new title of the accomplishment. Defaults to "".
         category (str, optional): An EXISTING category to move the accomplishment to. Defaults to "".
-        tags (str, optional): Comma-separated new tags to associate with the accomplishment. Defaults to "".
+        tags (str, optional): Comma-separated tags, REPLACING the current set. Defaults to "".
+            Same rules as add_accomplishment: prefer existing tags, at most 2 new ones per call.
         description (str, optional): A new detailed description of the accomplishment. Defaults to "".
 
     Returns:
@@ -648,6 +658,20 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
             )
         category = resolved["name"]
 
+    # Same new-tag budget as add_accomplishment. Without this the cap would be
+    # trivially bypassable — an agent could just call update to bolt on ten new
+    # tags — so the edit path has to honour it too.
+    dropped = []
+    if tags:
+        resolved_tags = resolve_tags(tags, fetch_all_tags(api_url, api_key))
+        dropped = resolved_tags["dropped"]
+        tags = ",".join(resolved_tags["tags"])
+        if not tags:
+            return (
+                "No tags could be applied: every proposed tag was refused by the new-tag "
+                "budget. Call list_tags and reuse an existing tag instead."
+            )
+
     payload = {}
     if title:
         payload["title"] = title
@@ -664,7 +688,10 @@ def update_accomplishment(accomplishment_id: str, title: str = "", category: str
     try:
         response = requests.patch(f"{api_url}/{accomplishment_id}", json=payload, headers=headers)
         response.raise_for_status()
-        return f"Accomplishment with ID {accomplishment_id} updated successfully."
+        return (
+            f"Accomplishment with ID {accomplishment_id} updated successfully."
+            + dropped_tags_note(dropped)
+        )
     except requests.exceptions.HTTPError as http_err:
         status_code = response.status_code if 'response' in locals() else 'unknown'
         if status_code == 401:
