@@ -1,46 +1,34 @@
-import { db } from "@/lib/db";
+import { getAccomplishmentStats } from "@/lib/actions";
 import { TrendingUp, Calendar, Tag, Award } from "lucide-react";
 
 export async function StatsOverview() {
-  const [totalAccomplishments, thisWeekCount, totalCategories, totalTags] =
-    await Promise.all([
-      db.accomplishment.count(),
-      db.accomplishment.count({
-        where: {
-          date: {
-            gte: new Date(new Date().setDate(new Date().getDate() - 7)),
-          },
-        },
-      }),
-      db.category.count(),
-      db.tag.count(),
-    ]);
+  const { totals } = await getAccomplishmentStats();
 
   const stats = [
     {
       label: "Total Accomplishments",
-      value: totalAccomplishments,
+      value: totals.total,
       icon: Award,
       color: "text-blue-600",
       bgColor: "bg-kimberly",
     },
     {
       label: "This Week",
-      value: thisWeekCount,
+      value: totals.thisWeek,
       icon: Calendar,
       color: "text-green-600",
       bgColor: "bg-kimberly",
     },
     {
       label: "Categories",
-      value: totalCategories,
+      value: totals.categories,
       icon: TrendingUp,
       color: "text-purple-600",
       bgColor: "bg-kimberly",
     },
     {
       label: "Tags",
-      value: totalTags,
+      value: totals.tags,
       icon: Tag,
       color: "text-orange-600",
       bgColor: "bg-kimberly",

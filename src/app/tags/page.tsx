@@ -1,54 +1,30 @@
 import { getTagsWithAccomplishmentCount } from "@/lib/actions";
-import Link from "next/link";
+import { CategoryTagManager, type ManagedItem } from "@/components/category-tag-manager";
 
 // Mark this page as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
 
-type Tag = {
-  id: string;
-  name: string;
-  color: string | null;
-  _count: {
-    accomplishments: number;
-  };
-};
-
 export default async function TagsPage() {
   const tags = await getTagsWithAccomplishmentCount();
+
+  const items: ManagedItem[] = tags.map((t) => ({
+    id: t.id,
+    name: t.name,
+    color: t.color,
+    description: t.description,
+    count: t._count.accomplishments,
+  }));
 
   return (
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-mischka">All Tags</h1>
         <p className="text-lg text-kimberly max-w-2xl mx-auto">
-          Browse all tags used to categorize your accomplishments.
+          Browse and manage the tags used to categorize your accomplishments.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {tags.map((tag: Tag) => (
-          <Link href={`/tags/${tag.name}`} key={tag.id}>
-            <div className="bg-ebony-clay rounded-lg shadow-sm border border-kimberly p-6 text-center hover:border-blue-600 transition-colors">
-              <div className="flex items-center justify-center mb-3">
-                <div
-                  className="w-4 h-4 rounded-full mr-2"
-                  style={{ backgroundColor: tag.color ?? "#ffffff" }}
-                ></div>
-                <h3
-                  className="font-semibold text-mischka"
-                  style={{ color: tag.color ?? "#ffffff" }}
-                >
-                  {tag.name}
-                </h3>
-              </div>
-              <p className="text-sm text-steel-gray">
-                {tag._count.accomplishments} accomplishment
-                {tag._count.accomplishments !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <CategoryTagManager kind="tag" items={items} hrefBase="/tags/" />
     </div>
   );
 }

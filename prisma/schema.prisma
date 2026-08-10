@@ -36,10 +36,15 @@ model Accomplishment {
   description String?
   date        DateTime
   categoryId  String
-  category    Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category    Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   tags        AccomplishmentTag[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  // Every list/search/stats query orders or filters on date; category filtering
+  // and cascade lookups hit categoryId.
+  @@index([date])
+  @@index([categoryId])
 }
 
 model AccomplishmentTag {

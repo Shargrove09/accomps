@@ -47,6 +47,8 @@ export type AccomplishmentItem = {
   tags: {
     tag: TagOption;
   }[];
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 // ── Domain / analytics types ────────────────────────────────────────────────
@@ -68,16 +70,4 @@ export type FilterOptions = {
     end: Date;
   };
   search?: string;
-};
-
-export type ParsedAccomplishment = {
-  title: string;
-  description?: string;
-  category?: string;
-  tags: string[];
-  confidence?: number;
-  status?: string;
-  reasoning?: string;
-  raw_input?: string;
-  source?: string;
 };

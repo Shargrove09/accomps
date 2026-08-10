@@ -9,6 +9,15 @@ import {
 import { X, ChevronDown } from "lucide-react";
 import type { AccomplishmentItem, CategoryOption, FormTag } from "@/lib/types";
 
+/** Convert a Date to the `YYYY-MM-DDTHH:mm` value a datetime-local input expects (local time). */
+function toDateTimeLocal(date: Date): string {
+  const d = new Date(date);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
+
 export function EditAccomplishmentForm({
   accomplishment,
   onClose,
@@ -24,6 +33,7 @@ export function EditAccomplishmentForm({
     accomplishment.description || "",
   );
   const [category, setCategory] = useState(accomplishment.category.name);
+  const [date, setDate] = useState(toDateTimeLocal(accomplishment.date));
 
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
@@ -112,6 +122,9 @@ export function EditAccomplishmentForm({
         description: description.trim() || undefined,
         category: category.trim(),
         tags: tagNames,
+        ...(date && { date: new Date(date) }),
+        // Deliberate human choice in the UI — see add-accomplishment-form.
+        allowNewCategory: true,
       });
 
       if (result.success && result.data) {
@@ -226,6 +239,22 @@ export function EditAccomplishmentForm({
           </div>
 
           <div>
+            <label
+              htmlFor="date"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Date
+            </label>
+            <input
+              type="datetime-local"
+              id="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tags
             </label>
@@ -312,6 +341,11 @@ export function EditAccomplishmentForm({
               </div>
             )}
           </div>
+
+          <p className="text-xs text-gray-500">
+            Created {new Date(accomplishment.createdAt).toLocaleString()} · Last
+            edited {new Date(accomplishment.updatedAt).toLocaleString()}
+          </p>
 
           <div className="flex gap-3 pt-4">
             <button

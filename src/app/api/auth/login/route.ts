@@ -7,6 +7,7 @@ import {
   AUTH_COOKIE_NAME,
   AUTH_COOKIE_OPTIONS,
 } from "@/lib/auth";
+import { jsonError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   try {
@@ -15,10 +16,7 @@ export async function POST(request: Request) {
 
     // Validate that password was provided
     if (!password) {
-      return NextResponse.json(
-        { error: "Password is required" },
-        { status: 400 }
-      );
+      return jsonError("Password is required", 400);
     }
 
     // Check that required env vars are configured
@@ -28,15 +26,12 @@ export async function POST(request: Request) {
         "Missing auth environment variables:",
         config.missingVars.join(", ")
       );
-      return NextResponse.json(
-        { error: "Authentication is not configured" },
-        { status: 500 }
-      );
+      return jsonError("Authentication is not configured", 500);
     }
 
     // Validate password against environment variable
     if (!validatePassword(password)) {
-      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+      return jsonError("Invalid password", 401);
     }
 
     // Password is correct, set the authentication cookie
@@ -49,9 +44,6 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "An error occurred during login" },
-      { status: 500 }
-    );
+    return jsonError("An error occurred during login", 500, error);
   }
 }

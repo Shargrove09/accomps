@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { jsonError } from "@/lib/api-response";
 
 export async function POST() {
   try {
@@ -13,9 +14,6 @@ export async function POST() {
     );
   } catch (error) {
     console.error("Logout error:", error);
-    return NextResponse.json(
-      { error: "An error occurred during logout" },
-      { status: 500 }
-    );
+    return jsonError("An error occurred during logout", 500, error);
   }
 }

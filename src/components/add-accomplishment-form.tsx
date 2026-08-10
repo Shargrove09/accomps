@@ -6,8 +6,9 @@ import {
   addAccomplishment,
   getCategories,
   getExistingTags,
+  generateDescription,
 } from "@/lib/actions";
-import { Plus, ChevronDown, X } from "lucide-react";
+import { Plus, ChevronDown, X, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import type { CategoryOption, FormTag } from "@/lib/types";
 
@@ -17,6 +18,7 @@ export function AddAccomplishmentForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // New state for category management
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -88,6 +90,23 @@ export function AddAccomplishmentForm() {
     }
   };
 
+  const handleGenerateDescription = async () => {
+    if (!title.trim() || isGenerating) return;
+    setIsGenerating(true);
+    try {
+      const result = await generateDescription({
+        title: title.trim(),
+        category: category.trim() || undefined,
+        tags: selectedTags.map((tag) => tag.name),
+      });
+      if (result.description) {
+        setDescription(result.description);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -97,11 +116,25 @@ export function AddAccomplishmentForm() {
       // Convert selected tags to tag names for the API
       const tagNames = selectedTags.map((tag) => tag.name);
 
+      // If the user left the description blank, auto-generate a short one.
+      let finalDescription = description.trim();
+      if (!finalDescription) {
+        const generated = await generateDescription({
+          title: title.trim(),
+          category: category.trim() || undefined,
+          tags: tagNames,
+        });
+        finalDescription = generated.description;
+      }
+
       await addAccomplishment({
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: finalDescription || undefined,
         category: category.trim(),
         tags: tagNames,
+        // The form's "+ Create New Category" option is a deliberate human
+        // choice, so this path opts in. The agent API does not.
+        allowNewCategory: true,
       });
 
       // Reset form
@@ -210,12 +243,23 @@ export function AddAccomplishmentForm() {
       </div>
 
       <div>
-        <label
-          htmlFor="description"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Description
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Description
+          </label>
+          <Button
+            type="button"
+            onClick={handleGenerateDescription}
+            disabled={!title.trim() || isGenerating}
+            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {isGenerating ? "Generating..." : "Generate"}
+          </Button>
+        </div>
         <textarea
           id="description"
           value={description}
