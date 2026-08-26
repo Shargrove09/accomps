@@ -8,7 +8,11 @@ import { EditAccomplishmentForm } from "./edit-accomplishment-form";
 import { ConfirmDialog } from "./confirm-dialog";
 import { deleteAccomplishment, getAccomplishment } from "@/lib/actions";
 import { useDebounce } from "@/lib/hooks";
-import type { AccomplishmentItem, CategoryOption, TagOption } from "@/lib/types";
+import type {
+  AccomplishmentItem,
+  CategoryOption,
+  TagOption,
+} from "@/lib/types";
 
 export function AccomplishmentsList({
   initialAccomplishments,
@@ -21,7 +25,7 @@ export function AccomplishmentsList({
 }) {
   const router = useRouter();
   const [accomplishments, setAccomplishments] = useState(
-    initialAccomplishments
+    initialAccomplishments,
   );
   const [editingAccomplishment, setEditingAccomplishment] =
     useState<AccomplishmentItem | null>(null);
@@ -64,10 +68,10 @@ export function AccomplishmentsList({
       // Tag filter: OR logic (show if ANY tag matches OR array empty)
       if (selectedTags.length > 0) {
         const accomplishmentTagNames = accomplishment.tags.map(
-          (t) => t.tag.name
+          (t) => t.tag.name,
         );
         const hasMatchingTag = selectedTags.some((selectedTag) =>
-          accomplishmentTagNames.includes(selectedTag)
+          accomplishmentTagNames.includes(selectedTag),
         );
         if (!hasMatchingTag) return false;
       }
@@ -81,7 +85,7 @@ export function AccomplishmentsList({
     setSelectedCategories((prev) =>
       prev.includes(categoryName)
         ? prev.filter((c) => c !== categoryName)
-        : [...prev, categoryName]
+        : [...prev, categoryName],
     );
   };
 
@@ -89,7 +93,7 @@ export function AccomplishmentsList({
     setSelectedTags((prev) =>
       prev.includes(tagName)
         ? prev.filter((t) => t !== tagName)
-        : [...prev, tagName]
+        : [...prev, tagName],
     );
   };
 
@@ -112,8 +116,8 @@ export function AccomplishmentsList({
   const handleEditSuccess = (updatedAccomplishment: AccomplishmentItem) => {
     setAccomplishments((prev) =>
       prev.map((a) =>
-        a.id === updatedAccomplishment.id ? updatedAccomplishment : a
-      )
+        a.id === updatedAccomplishment.id ? updatedAccomplishment : a,
+      ),
     );
 
     setEditingAccomplishment(null);
@@ -160,7 +164,7 @@ export function AccomplishmentsList({
             <label className="text-sm font-medium text-kimberly mb-2 block">
               Categories
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2 pt-1 pl-1">
+            <div className="flex flex-wrap gap-2 pt-1 pl-1 max-h-24 overflow-y-auto scroll-slim">
               {categories.map((category) => {
                 const isSelected = selectedCategories.includes(category.name);
                 return (
@@ -188,7 +192,7 @@ export function AccomplishmentsList({
             <label className="text-sm font-medium text-kimberly mb-2 block">
               Tags
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2 pt-1 pl-1">
+            <div className="flex flex-wrap gap-2 pt-1 pl-1 max-h-24 overflow-y-auto scroll-slim">
               {tags.map((tag) => {
                 const isSelected = selectedTags.includes(tag.name);
                 return (

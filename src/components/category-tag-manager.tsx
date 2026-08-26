@@ -308,8 +308,8 @@ function BulkActionDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
             {mode === "merge" ? "Merge" : "Delete"} {items.length} tag
@@ -325,7 +325,7 @@ function BulkActionDialog({
         </div>
 
         <div className="px-6 py-4 space-y-4">
-          <div className="max-h-32 overflow-y-auto rounded border border-gray-200 bg-gray-50 px-3 py-2">
+          <div className="max-h-32 overflow-y-auto scroll-slim rounded border border-gray-200 bg-gray-50 px-3 py-2">
             <p className="text-sm text-gray-700">
               {items.map((i) => i.name).join(", ")}
             </p>
@@ -449,8 +449,8 @@ function EditItemDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
             Edit {label}
@@ -575,8 +575,8 @@ function DeleteItemDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
             Delete {label}

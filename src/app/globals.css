@@ -52,6 +52,40 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Tailwind v4 ships no scrollbar utilities. These use the standard properties
+   (Chrome 121+, Safari 18.2+, Firefox); note that once scrollbar-width/color is
+   set on an element, Chromium ignores ::-webkit-scrollbar rules on that same
+   element — so never style an element both ways. */
+@utility scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-east-bay) transparent;
+}
+
+@utility scroll-hidden {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility fade-x {
+  --fade: 1.5rem;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
+}
+
 .rbc-day-bg {
   background-color: var(--color-ebony-clay) !important;
 }
@@ -140,5 +174,22 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-east-bay) transparent;
+  }
+}
+
+/* One global opt-out so individual components don't each have to guard their
+   hover lifts, card entrances, and count-up animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

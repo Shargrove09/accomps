@@ -201,7 +201,7 @@ export function AddAccomplishmentForm() {
               <select
                 value={selectedCategoryId}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-ebony-clay"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-ebony-clay cursor-pointer"
                 required
               >
                 <option value="">Select a category...</option>
@@ -318,15 +318,15 @@ export function AddAccomplishmentForm() {
                         handleTagSelect(e.target.value);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-ebony-clay"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-ebony-clay cursor-pointer"
                   >
                     <option value="">Select a tag to add...</option>
                     {availableTags
                       .filter(
                         (tag) =>
                           !selectedTags.find(
-                            (selected) => selected.id === tag.id
-                          )
+                            (selected) => selected.id === tag.id,
+                          ),
                       )
                       .map((tag) => (
                         <option key={tag.id} value={tag.id}>

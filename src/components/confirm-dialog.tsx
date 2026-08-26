@@ -20,8 +20,8 @@ export function ConfirmDialog({
   variant?: "danger" | "primary";
 }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button
