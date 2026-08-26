@@ -8,6 +8,18 @@ import {
 } from "@/lib/actions";
 import { X, ChevronDown } from "lucide-react";
 import type { AccomplishmentItem, CategoryOption, FormTag } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import {
+  btnGhost,
+  btnPrimary,
+  dialogClose,
+  dialogOverlay,
+  dialogPanel,
+  dialogTitle,
+  fieldInput,
+  fieldLabel,
+  fieldSelect,
+} from "@/lib/ui";
 
 /** Convert a Date to the `YYYY-MM-DDTHH:mm` value a datetime-local input expects (local time). */
 function toDateTimeLocal(date: Date): string {
@@ -135,16 +147,21 @@ export function EditAccomplishmentForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
-      <div className="bg-mischka rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scroll-slim animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
-        <div className="sticky top-0 bg-east-bay border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Edit Accomplishment
-          </h2>
+    <div className={dialogOverlay}>
+      <div
+        className={cn(
+          dialogPanel,
+          "max-w-2xl max-h-[90vh] overflow-y-auto scroll-slim"
+        )}
+      >
+        {/* Sticky over a scrolling body, so it needs its own opaque fill. */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-kimberly bg-ebony-clay px-6 py-4">
+          <h2 className={cn(dialogTitle, "text-xl")}>Edit Accomplishment</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className={dialogClose}
+            aria-label="Close"
           >
             <X className="h-6 w-6" />
           </button>
@@ -153,10 +170,7 @@ export function EditAccomplishmentForm({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label
-                htmlFor="title"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="title" className={fieldLabel}>
                 Title *
               </label>
               <input
@@ -164,17 +178,14 @@ export function EditAccomplishmentForm({
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                className={fieldInput}
                 placeholder="What did you accomplish?"
                 required
               />
             </div>
 
             <div>
-              <label
-                htmlFor="category"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="category" className={fieldLabel}>
                 Category *
               </label>
               {isCreatingNewCategory ? (
@@ -183,7 +194,7 @@ export function EditAccomplishmentForm({
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                    className={cn(fieldInput, "flex-1")}
                     placeholder="New category name"
                     required
                   />
@@ -194,7 +205,7 @@ export function EditAccomplishmentForm({
                       setCategory(accomplishment.category.name);
                       setSelectedCategoryId(accomplishment.category.id);
                     }}
-                    className="px-3 py-2 text-gray-600 hover:text-gray-800 cursor-pointer"
+                    className="px-3 py-2 text-kimberly transition-colors hover:text-mischka hover:cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -204,7 +215,7 @@ export function EditAccomplishmentForm({
                   <select
                     value={selectedCategoryId}
                     onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
+                    className={fieldSelect}
                     required
                   >
                     <option value="">Select a category</option>
@@ -215,17 +226,14 @@ export function EditAccomplishmentForm({
                     ))}
                     <option value="create-new">+ Create New Category</option>
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
                 </div>
               )}
             </div>
           </div>
 
           <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="description" className={fieldLabel}>
               Description
             </label>
             <textarea
@@ -233,16 +241,13 @@ export function EditAccomplishmentForm({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700"
+              className={cn(fieldInput, "resize-none")}
               placeholder="Add more details (optional)"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="date"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="date" className={fieldLabel}>
               Date
             </label>
             <input
@@ -250,14 +255,12 @@ export function EditAccomplishmentForm({
               id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              className={fieldInput}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tags
-            </label>
+            <label className={cn(fieldLabel, "mb-2")}>Tags</label>
 
             {selectedTags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
@@ -292,14 +295,14 @@ export function EditAccomplishmentForm({
                       handleCustomTagAdd();
                     }
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={cn(fieldInput, "flex-1")}
                   placeholder="Enter custom tag name"
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={handleCustomTagAdd}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className={cn(btnPrimary, "px-3 py-2")}
                 >
                   Add
                 </button>
@@ -309,7 +312,7 @@ export function EditAccomplishmentForm({
                     setIsAddingCustomTag(false);
                     setCustomTagInput("");
                   }}
-                  className="px-3 py-2 text-gray-600 hover:text-gray-800"
+                  className="px-3 py-2 text-kimberly transition-colors hover:text-mischka hover:cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -325,7 +328,7 @@ export function EditAccomplishmentForm({
                     }
                     e.target.value = "";
                   }}
-                  className="w-full px-3 py-2 border border-ebony-clay rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer text-gray-700"
+                  className={fieldSelect}
                 >
                   <option value="">Add a tag...</option>
                   {availableTags
@@ -337,12 +340,12 @@ export function EditAccomplishmentForm({
                     ))}
                   <option value="add-custom">+ Add Custom Tag</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
               </div>
             )}
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-kimberly">
             Created {new Date(accomplishment.createdAt).toLocaleString()} · Last
             edited {new Date(accomplishment.updatedAt).toLocaleString()}
           </p>
@@ -351,14 +354,17 @@ export function EditAccomplishmentForm({
             <button
               type="submit"
               disabled={isPending || !title.trim() || !category.trim()}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium hover:cursor-pointer"
+              className={cn(
+                btnPrimary,
+                "flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-ebony-clay"
+              )}
             >
               {isPending ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
+              className={cn(btnGhost, "px-6")}
             >
               Cancel
             </button>

@@ -99,6 +99,11 @@
 }
 
 :root {
+  /* The app only ships a dark palette. This is what makes the controls we
+     can't style — native <select> dropdown lists, the datetime-local picker,
+     autofill backgrounds, form control defaults — render dark to match. */
+  color-scheme: dark;
+
   --radius: 0.625rem;
   /* Dark theme using existing color palette */
   --background: oklch(0.25 0.02 265); /* ebony-clay #292942 */

@@ -11,6 +11,8 @@ import {
 import { Plus, ChevronDown, X, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import type { CategoryOption, FormTag } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { fieldInput, fieldLabel, fieldSelect } from "@/lib/ui";
 
 export function AddAccomplishmentForm() {
   const router = useRouter();
@@ -171,10 +173,7 @@ export function AddAccomplishmentForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label
-            htmlFor="title"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label htmlFor="title" className={fieldLabel}>
             Title *
           </label>
           <input
@@ -182,17 +181,14 @@ export function AddAccomplishmentForm() {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={fieldInput}
             placeholder="What did you accomplish?"
             required
           />
         </div>
 
         <div>
-          <label
-            htmlFor="category"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label htmlFor="category" className={fieldLabel}>
             Category *
           </label>
 
@@ -201,7 +197,7 @@ export function AddAccomplishmentForm() {
               <select
                 value={selectedCategoryId}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-ebony-clay cursor-pointer"
+                className={fieldSelect}
                 required
               >
                 <option value="">Select a category...</option>
@@ -212,7 +208,7 @@ export function AddAccomplishmentForm() {
                 ))}
                 <option value="create-new">+ Create New Category</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
             </div>
           ) : (
             <div className="space-y-2">
@@ -221,18 +217,20 @@ export function AddAccomplishmentForm() {
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={fieldInput}
                 placeholder="Enter new category name"
                 required
               />
               {categories.length > 0 && (
                 <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setIsCreatingNewCategory(false);
                     setCategory("");
                   }}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="px-0 text-sm text-blue-400 hover:bg-transparent hover:text-blue-300"
                 >
                   ← Back to existing categories
                 </Button>
@@ -244,17 +242,19 @@ export function AddAccomplishmentForm() {
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor="description" className={cn(fieldLabel, "mb-0")}>
             Description
           </label>
           <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={handleGenerateDescription}
             disabled={!title.trim() || isGenerating}
-            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={cn(
+              "inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed",
+              isGenerating && "animate-pulse"
+            )}
           >
             <Sparkles className="h-3.5 w-3.5" />
             {isGenerating ? "Generating..." : "Generate"}
@@ -265,16 +265,13 @@ export function AddAccomplishmentForm() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={fieldInput}
           placeholder="Tell us more about this accomplishment..."
         />
       </div>
 
       <div>
-        <label
-          htmlFor="tags"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
+        <label htmlFor="tags" className={fieldLabel}>
           Tags
         </label>
 
@@ -285,20 +282,24 @@ export function AddAccomplishmentForm() {
               {selectedTags.map((tag) => (
                 <span
                   key={tag.id}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-800 rounded-md text-sm"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm font-medium"
                   style={{
-                    backgroundColor: tag.color + "20",
+                    backgroundColor: tag.color + "26",
+                    borderColor: tag.color + "59",
                     color: tag.color,
                   }}
                 >
                   {tag.name}
-                  <Button
+                  {/* Plain button, not <Button>: that carries a `bg-primary`
+                      pill that would sit inside the tag chip. */}
+                  <button
                     type="button"
                     onClick={() => handleTagRemove(tag.id)}
-                    className="ml-1 text-gray-500 hover:text-gray-700"
+                    aria-label={`Remove ${tag.name}`}
+                    className="ml-1 rounded-full p-0.5 opacity-70 transition-opacity hover:bg-white/20 hover:opacity-100 hover:cursor-pointer"
                   >
                     <X className="h-3 w-3" />
-                  </Button>
+                  </button>
                 </span>
               ))}
             </div>
@@ -318,7 +319,7 @@ export function AddAccomplishmentForm() {
                         handleTagSelect(e.target.value);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-ebony-clay cursor-pointer"
+                    className={fieldSelect}
                   >
                     <option value="">Select a tag to add...</option>
                     {availableTags
@@ -335,7 +336,7 @@ export function AddAccomplishmentForm() {
                       ))}
                     <option value="create-new">+ Create New Tag</option>
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
                 </div>
               )}
 
@@ -343,7 +344,7 @@ export function AddAccomplishmentForm() {
                 <button
                   type="button"
                   onClick={() => setIsAddingCustomTag(true)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-left text-gray-500 hover:bg-gray-50"
+                  className="w-full rounded-md border border-dashed border-kimberly bg-steel-gray px-3 py-2 text-left text-kimberly transition-colors hover:border-blue-500/70 hover:text-mischka hover:cursor-pointer"
                 >
                   + Add your first tag
                 </button>
@@ -355,20 +356,20 @@ export function AddAccomplishmentForm() {
                 type="text"
                 value={customTagInput}
                 onChange={(e) => setCustomTagInput(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     handleCustomTagAdd();
                   }
                 }}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={cn(fieldInput, "flex-1")}
                 placeholder="Enter new tag name"
                 autoFocus
               />
               <button
                 type="button"
                 onClick={handleCustomTagAdd}
-                className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="rounded-md bg-blue-600 px-3 py-2 font-medium text-white transition-colors hover:bg-blue-700 hover:cursor-pointer"
               >
                 Add
               </button>
@@ -378,7 +379,7 @@ export function AddAccomplishmentForm() {
                   setIsAddingCustomTag(false);
                   setCustomTagInput("");
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                className="rounded-md border border-kimberly px-3 py-2 text-mischka transition-colors hover:bg-east-bay hover:cursor-pointer"
               >
                 Cancel
               </button>
@@ -391,7 +392,7 @@ export function AddAccomplishmentForm() {
         <Button
           type="submit"
           disabled={isPending || !title.trim() || !category.trim()}
-          className="inline-flex items-center gap-2 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-ebony-clay disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           {isPending ? "Adding..." : "Add Accomplishment"}

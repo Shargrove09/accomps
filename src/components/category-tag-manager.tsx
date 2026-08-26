@@ -4,6 +4,22 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  btnDanger,
+  btnGhost,
+  btnPrimary,
+  dialogBody,
+  dialogClose,
+  dialogFooter,
+  dialogHeader,
+  dialogOverlay,
+  dialogPanel,
+  dialogText,
+  dialogTitle,
+  fieldInput,
+  fieldLabel,
+} from "@/lib/ui";
 import {
   updateCategory,
   deleteCategory,
@@ -308,25 +324,26 @@ function BulkActionDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div className={dialogOverlay}>
+      <div className={cn(dialogPanel, "max-w-md")}>
+        <div className={dialogHeader}>
+          <h3 className={dialogTitle}>
             {mode === "merge" ? "Merge" : "Delete"} {items.length} tag
             {items.length !== 1 ? "s" : ""}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className={dialogClose}
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="px-6 py-4 space-y-4">
-          <div className="max-h-32 overflow-y-auto scroll-slim rounded border border-gray-200 bg-gray-50 px-3 py-2">
-            <p className="text-sm text-gray-700">
+        <div className={dialogBody}>
+          <div className="max-h-32 overflow-y-auto scroll-slim rounded border border-kimberly bg-steel-gray px-3 py-2">
+            <p className="text-sm text-mischka">
               {items.map((i) => i.name).join(", ")}
             </p>
           </div>
@@ -334,13 +351,11 @@ function BulkActionDialog({
           {mode === "merge" ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Merge into (required)
-                </label>
+                <label className={fieldLabel}>Merge into (required)</label>
                 <select
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                  className={fieldInput}
                 >
                   <option value="">Select a target...</option>
                   {targets.map((t) => (
@@ -353,14 +368,14 @@ function BulkActionDialog({
               {/* No summed total here on purpose: an accomplishment carrying
                   several of the selected tags collapses to a single link, so
                   adding up the counts would overstate the result. */}
-              <p className="text-sm text-gray-600">
+              <p className={dialogText}>
                 The target will be applied to every accomplishment that had any
                 of these tags; duplicates collapse. The {items.length} merged tag
                 {items.length !== 1 ? "s" : ""} will then be deleted.
               </p>
             </>
           ) : (
-            <p className="text-sm text-gray-600">
+            <p className={dialogText}>
               {linkCount > 0 ? (
                 <>
                   These tags will be removed from the accomplishments carrying
@@ -374,26 +389,18 @@ function BulkActionDialog({
             </p>
           )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 flex gap-3 justify-end rounded-b-lg">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors font-medium"
-          >
+        <div className={dialogFooter}>
+          <button type="button" onClick={onClose} className={btnGhost}>
             Cancel
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={isPending || (mode === "merge" && !targetId)}
-            className={`px-4 py-2 rounded-md text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-              mode === "merge"
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-red-600 hover:bg-red-700"
-            }`}
+            className={mode === "merge" ? btnPrimary : btnDanger}
           >
             {isPending
               ? "Working..."
@@ -449,61 +456,57 @@ function EditItemDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Edit {label}
-          </h3>
+    <div className={dialogOverlay}>
+      <div className={cn(dialogPanel, "max-w-md")}>
+        <div className={dialogHeader}>
+          <h3 className={dialogTitle}>Edit {label}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className={dialogClose}
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="px-6 py-4 space-y-4">
+        <div className={dialogBody}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Name *
-            </label>
+            <label className={fieldLabel}>Name *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              className={fieldInput}
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
+            <label className={fieldLabel}>Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700"
+              className={cn(fieldInput, "resize-none")}
               placeholder="Optional"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Color
-            </label>
+            <label className={cn(fieldLabel, "mb-2")}>Color</label>
             <div className="flex flex-wrap gap-2">
               {PALETTE.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${
-                    color === c ? "ring-2 ring-offset-2 ring-gray-900" : ""
-                  }`}
+                  className={cn(
+                    "h-8 w-8 rounded-full transition-transform hover:scale-110 hover:cursor-pointer",
+                    // Offset ring matches the panel, so the halo reads as a gap.
+                    color === c &&
+                      "ring-2 ring-mischka ring-offset-2 ring-offset-ebony-clay"
+                  )}
                   style={{ backgroundColor: c }}
                   aria-label={`Select color ${c}`}
                 />
@@ -511,22 +514,18 @@ function EditItemDialog({
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 flex gap-3 justify-end rounded-b-lg">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors font-medium"
-          >
+        <div className={dialogFooter}>
+          <button type="button" onClick={onClose} className={btnGhost}>
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
             disabled={isPending}
-            className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
+            className={btnPrimary}
           >
             {isPending ? "Saving..." : "Save"}
           </button>
@@ -575,23 +574,22 @@ function DeleteItemDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in animation-duration-150">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-2 animation-duration-200">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Delete {label}
-          </h3>
+    <div className={dialogOverlay}>
+      <div className={cn(dialogPanel, "max-w-md")}>
+        <div className={dialogHeader}>
+          <h3 className={dialogTitle}>Delete {label}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className={dialogClose}
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="px-6 py-4 space-y-4">
-          <p className="text-gray-600">
+        <div className={dialogBody}>
+          <p className={dialogText}>
             {item.count > 0 ? (
               <>
                 <strong>{item.name}</strong> is used by {item.count}{" "}
@@ -609,13 +607,13 @@ function DeleteItemDialog({
 
           {item.count > 0 && others.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={fieldLabel}>
                 Merge into {mustMerge ? "(required)" : "(optional)"}
               </label>
               <select
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                className={fieldInput}
               >
                 <option value="">
                   {mustMerge ? "Select a target..." : `Don't merge — just delete`}
@@ -629,22 +627,18 @@ function DeleteItemDialog({
             </div>
           )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 flex gap-3 justify-end rounded-b-lg">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors font-medium"
-          >
+        <div className={dialogFooter}>
+          <button type="button" onClick={onClose} className={btnGhost}>
             Cancel
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={isPending || (mustMerge && !targetId)}
-            className="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className={btnDanger}
           >
             {isPending
               ? "Working..."
