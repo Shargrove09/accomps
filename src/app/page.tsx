@@ -82,11 +82,7 @@ async function RecentAccomplishments({
 }
 
 export default async function Home() {
-  // Read once here and pass down. Both the add form and the list need these,
-  // and the forms used to fetch them again from the client on mount — which
-  // meant the dropdowns stayed empty until hydration plus a round trip.
-  // These two queries are small and indexed; the expensive reads stay inside
-  // the Suspense boundaries below so the shell still flushes early.
+  // Passed to RecentAccomplishments to avoid fetching categories and tags twice
   const [categories, tags] = await Promise.all([
     getCategories(),
     getExistingTags(),
@@ -174,14 +170,14 @@ export default async function Home() {
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-steel-gray",
                   "animate-in fade-in slide-in-from-bottom-3 animation-duration-500 fill-mode-backwards",
                   action.hoverBorder,
-                  action.delay
+                  action.delay,
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
                     "pointer-events-none absolute inset-x-0 -top-16 h-32 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100",
-                    action.tint
+                    action.tint,
                   )}
                 />
 
@@ -193,7 +189,7 @@ export default async function Home() {
                 <Icon
                   className={cn(
                     "relative mx-auto mb-3 h-8 w-8 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110",
-                    action.accent
+                    action.accent,
                   )}
                 />
                 <h3 className="relative mb-2 font-semibold text-mischka">
