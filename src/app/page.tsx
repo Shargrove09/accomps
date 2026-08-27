@@ -3,30 +3,74 @@ import Link from "next/link";
 import { AddAccomplishmentForm } from "@/components/add-accomplishment-form";
 import { AccomplishmentsList } from "@/components/accomplishments-list";
 import { StatsOverview } from "@/components/stats-overview";
-import { Plus, TrendingUp, Calendar, Tag } from "lucide-react";
+import {
+  ArrowUpRight,
+  Calendar,
+  Folder,
+  Plus,
+  Tag,
+  TrendingUp,
+} from "lucide-react";
 import { db } from "@/lib/db";
 import { getCategories, getExistingTags } from "@/lib/actions";
+import { cn } from "@/lib/utils";
+import type { CategoryOption, TagOption } from "@/lib/types";
 
 // Mark this page as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
 
-async function RecentAccomplishments() {
-  const [accomplishments, categories, tags] = await Promise.all([
-    db.accomplishment.findMany({
-      take: 10,
-      orderBy: { date: "desc" },
-      include: {
-        category: true,
-        tags: {
-          include: {
-            tag: true,
-          },
+const QUICK_ACTIONS = [
+  {
+    href: "/calendar",
+    icon: Calendar,
+    title: "View Calendar",
+    description: "See your accomplishments organized by date",
+    accent: "text-blue-400",
+    tint: "bg-blue-500/10",
+    hoverBorder: "hover:border-blue-500/70",
+    delay: "delay-0",
+  },
+  {
+    href: "/categories",
+    icon: Folder,
+    title: "Manage Categories",
+    description: "Rename, recolor, and merge your categories",
+    accent: "text-purple-400",
+    tint: "bg-purple-500/10",
+    hoverBorder: "hover:border-purple-500/70",
+    delay: "delay-75",
+  },
+  {
+    href: "/tags",
+    icon: Tag,
+    title: "Manage Tags",
+    description: "Organize and categorize your achievements",
+    accent: "text-orange-400",
+    tint: "bg-orange-500/10",
+    hoverBorder: "hover:border-orange-500/70",
+    delay: "delay-150",
+  },
+];
+
+async function RecentAccomplishments({
+  categories,
+  tags,
+}: {
+  categories: CategoryOption[];
+  tags: TagOption[];
+}) {
+  const accomplishments = await db.accomplishment.findMany({
+    take: 10,
+    orderBy: { date: "desc" },
+    include: {
+      category: true,
+      tags: {
+        include: {
+          tag: true,
         },
       },
-    }),
-    getCategories(),
-    getExistingTags(),
-  ]);
+    },
+  });
 
   return (
     <AccomplishmentsList
@@ -37,7 +81,13 @@ async function RecentAccomplishments() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  // Passed to RecentAccomplishments to avoid fetching categories and tags twice
+  const [categories, tags] = await Promise.all([
+    getCategories(),
+    getExistingTags(),
+  ]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -53,7 +103,16 @@ export default function Home() {
 
       {/* Quick Stats */}
       <Suspense
-        fallback={<div className="animate-pulse bg-gray-200 rounded-lg h-32" />}
+        fallback={
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div
+                key={i}
+                className="h-38 animate-pulse rounded-lg border border-kimberly bg-ebony-clay"
+              />
+            ))}
+          </div>
+        }
       >
         <StatsOverview />
       </Suspense>
@@ -66,7 +125,7 @@ export default function Home() {
             Add New Accomplishment
           </h2>
         </div>
-        <AddAccomplishmentForm />
+        <AddAccomplishmentForm categories={categories} tags={tags} />
       </div>
 
       {/* Recent Accomplishments */}
@@ -87,38 +146,72 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <Suspense fallback={<div className="animate-pulse bg-gray-200 h-64" />}>
-          <RecentAccomplishments />
+        <Suspense
+          fallback={<div className="h-64 animate-pulse bg-east-bay/30" />}
+        >
+          <RecentAccomplishments categories={categories} tags={tags} />
         </Suspense>
       </div>
 
       {/* Quick Actions */}
-      {/* Calendar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link href="/calendar">
-          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center hover:bg-ebony-clay transition-colors">
-            <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-            <h3 className="font-semibold text-mischka mb-2">View Calendar</h3>
-            <p className="text-sm text-steel-gray">
-              See your accomplishments organized by date
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-mischka">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className={cn(
+                  "group relative overflow-hidden rounded-lg border border-kimberly bg-ebony-clay p-6 text-center",
+                  "transition-[transform,border-color,box-shadow] duration-200 ease-out",
+                  "hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-steel-gray",
+                  "animate-in fade-in slide-in-from-bottom-3 animation-duration-500 fill-mode-backwards",
+                  action.hoverBorder,
+                  action.delay,
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute inset-x-0 -top-16 h-32 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100",
+                    action.tint,
+                  )}
+                />
+
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="absolute right-3 top-3 h-4 w-4 text-kimberly opacity-0 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100"
+                />
+
+                <Icon
+                  className={cn(
+                    "relative mx-auto mb-3 h-8 w-8 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110",
+                    action.accent,
+                  )}
+                />
+                <h3 className="relative mb-2 font-semibold text-mischka">
+                  {action.title}
+                </h3>
+                <p className="relative text-sm text-mischka/70">
+                  {action.description}
+                </p>
+              </Link>
+            );
+          })}
+
+          <div className="relative rounded-lg border border-dashed border-kimberly bg-ebony-clay/60 p-6 text-center opacity-60">
+            <span className="absolute right-3 top-3 rounded-full bg-east-bay px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-mischka/80">
+              Soon
+            </span>
+            <TrendingUp className="mx-auto mb-3 h-8 w-8 text-green-400" />
+            <h3 className="mb-2 font-semibold text-mischka">View Analytics</h3>
+            <p className="text-sm text-mischka/70">
+              Track your progress and patterns
             </p>
           </div>
-        </Link>
-        <Link href="/tags">
-          <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center hover:bg-ebony-clay transition-colors">
-            <Tag className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-            <h3 className="font-semibold text-mischka mb-2">Manage Tags</h3>
-            <p className="text-sm text-steel-gray">
-              Organize and categorize your achievements
-            </p>
-          </div>
-        </Link>
-        <div className="bg-east-bay rounded-lg shadow-sm border p-6 text-center opacity-60 cursor-not-allowed">
-          <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-3" />
-          <h3 className="font-semibold text-mischka  mb-2">View Analytics</h3>
-          <p className="text-sm text-steel-gray ">
-            Track your progress and patterns
-          </p>
         </div>
       </div>
     </div>
