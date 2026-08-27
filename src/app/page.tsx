@@ -14,6 +14,7 @@ import {
 import { db } from "@/lib/db";
 import { getCategories, getExistingTags } from "@/lib/actions";
 import { cn } from "@/lib/utils";
+import type { CategoryOption, TagOption } from "@/lib/types";
 
 // Mark this page as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -51,23 +52,25 @@ const QUICK_ACTIONS = [
   },
 ];
 
-async function RecentAccomplishments() {
-  const [accomplishments, categories, tags] = await Promise.all([
-    db.accomplishment.findMany({
-      take: 10,
-      orderBy: { date: "desc" },
-      include: {
-        category: true,
-        tags: {
-          include: {
-            tag: true,
-          },
+async function RecentAccomplishments({
+  categories,
+  tags,
+}: {
+  categories: CategoryOption[];
+  tags: TagOption[];
+}) {
+  const accomplishments = await db.accomplishment.findMany({
+    take: 10,
+    orderBy: { date: "desc" },
+    include: {
+      category: true,
+      tags: {
+        include: {
+          tag: true,
         },
       },
-    }),
-    getCategories(),
-    getExistingTags(),
-  ]);
+    },
+  });
 
   return (
     <AccomplishmentsList
@@ -78,7 +81,17 @@ async function RecentAccomplishments() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  // Read once here and pass down. Both the add form and the list need these,
+  // and the forms used to fetch them again from the client on mount — which
+  // meant the dropdowns stayed empty until hydration plus a round trip.
+  // These two queries are small and indexed; the expensive reads stay inside
+  // the Suspense boundaries below so the shell still flushes early.
+  const [categories, tags] = await Promise.all([
+    getCategories(),
+    getExistingTags(),
+  ]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -116,7 +129,7 @@ export default function Home() {
             Add New Accomplishment
           </h2>
         </div>
-        <AddAccomplishmentForm />
+        <AddAccomplishmentForm categories={categories} tags={tags} />
       </div>
 
       {/* Recent Accomplishments */}
@@ -140,7 +153,7 @@ export default function Home() {
         <Suspense
           fallback={<div className="h-64 animate-pulse bg-east-bay/30" />}
         >
-          <RecentAccomplishments />
+          <RecentAccomplishments categories={categories} tags={tags} />
         </Suspense>
       </div>
 

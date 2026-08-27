@@ -343,6 +343,8 @@ export function AccomplishmentsList({
       {editingAccomplishment && (
         <EditAccomplishmentForm
           accomplishment={editingAccomplishment}
+          categories={categories}
+          tags={tags}
           onClose={() => setEditingAccomplishment(null)}
           onSuccess={handleEditSuccess}
         />

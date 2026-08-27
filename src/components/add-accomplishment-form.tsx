@@ -1,20 +1,24 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  addAccomplishment,
-  getCategories,
-  getExistingTags,
-  generateDescription,
-} from "@/lib/actions";
+import { addAccomplishment, generateDescription } from "@/lib/actions";
 import { Plus, ChevronDown, X, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
-import type { CategoryOption, FormTag } from "@/lib/types";
+import type { CategoryOption, FormTag, TagOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fieldInput, fieldLabel, fieldSelect } from "@/lib/ui";
 
-export function AddAccomplishmentForm() {
+/** Fallback for categories and tags stored without a colour. */
+const DEFAULT_COLOR = "#6B7280";
+
+export function AddAccomplishmentForm({
+  categories: categoryOptions,
+  tags: tagOptions,
+}: {
+  categories: CategoryOption[];
+  tags: TagOption[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
@@ -23,37 +27,32 @@ export function AddAccomplishmentForm() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   // New state for category management
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   // New state for tag management
-  const [availableTags, setAvailableTags] = useState<FormTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<FormTag[]>([]);
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
   const [customTagInput, setCustomTagInput] = useState("");
 
-  // Fetch categories and tags on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      // Load categories
-      const fetchedCategories = await getCategories();
-      const filteredCategories = fetchedCategories.map((cat) => ({
+  // Derived from props, not fetched on mount: the page already loaded these
+  // server-side, so the dropdowns are populated in the first paint instead of
+  // after hydration plus a server-action round trip. router.refresh() after a
+  // write re-renders the page, so new props arrive without a manual refetch.
+  const categories = useMemo(
+    () =>
+      categoryOptions.map((cat) => ({
         ...cat,
-        color: cat.color || "#6B7280", // Default color if null
-      }));
-      setCategories(filteredCategories);
+        color: cat.color || DEFAULT_COLOR,
+      })),
+    [categoryOptions],
+  );
 
-      // Load tags
-      const fetchedTags = await getExistingTags();
-      const filteredTags = fetchedTags.map((tag) => ({
-        ...tag,
-        color: tag.color || "#6B7280", // Default color if null
-      }));
-      setAvailableTags(filteredTags);
-    };
-    loadData();
-  }, []);
+  const availableTags = useMemo<FormTag[]>(
+    () =>
+      tagOptions.map((tag) => ({ ...tag, color: tag.color || DEFAULT_COLOR })),
+    [tagOptions],
+  );
 
   const handleCategoryChange = (value: string) => {
     if (value === "create-new") {
@@ -149,22 +148,10 @@ export function AddAccomplishmentForm() {
       setIsAddingCustomTag(false);
       setCustomTagInput("");
 
-      // Refresh categories and tags list
-      const fetchedCategories = await getCategories();
-      const transformedCategories = fetchedCategories.map((cat) => ({
-        ...cat,
-        color: cat.color || "#6B7280", // Default color if null
-      }));
-      setCategories(transformedCategories);
-
-      const fetchedTags = await getExistingTags();
-      const transformedTags = fetchedTags.map((tag) => ({
-        ...tag,
-        color: tag.color || "#6B7280", // Default color if null
-      }));
-      setAvailableTags(transformedTags);
-
-      // Refresh the page to update the accomplishments list
+      // Re-renders the page's Server Components, which re-reads the category
+      // and tag lists and passes them back down as props — so a category or tag
+      // created by this submit shows up in the dropdowns without a second
+      // round trip from here.
       router.refresh();
     });
   };

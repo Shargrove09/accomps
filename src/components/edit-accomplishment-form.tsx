@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import {
-  updateAccomplishment,
-  getCategories,
-  getExistingTags,
-} from "@/lib/actions";
+import { useState, useTransition, useMemo } from "react";
+import { updateAccomplishment } from "@/lib/actions";
 import { X, ChevronDown } from "lucide-react";
-import type { AccomplishmentItem, CategoryOption, FormTag } from "@/lib/types";
+import type {
+  AccomplishmentItem,
+  CategoryOption,
+  FormTag,
+  TagOption,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   btnGhost,
@@ -30,12 +31,19 @@ function toDateTimeLocal(date: Date): string {
   )}:${pad(d.getMinutes())}`;
 }
 
+/** Fallback for categories and tags stored without a colour. */
+const DEFAULT_COLOR = "#6B7280";
+
 export function EditAccomplishmentForm({
   accomplishment,
+  categories: categoryOptions,
+  tags: tagOptions,
   onClose,
   onSuccess,
 }: {
   accomplishment: AccomplishmentItem;
+  categories: CategoryOption[];
+  tags: TagOption[];
   onClose: () => void;
   onSuccess?: (updatedAccomplishment: AccomplishmentItem) => void;
 }) {
@@ -47,41 +55,37 @@ export function EditAccomplishmentForm({
   const [category, setCategory] = useState(accomplishment.category.name);
   const [date, setDate] = useState(toDateTimeLocal(accomplishment.date));
 
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(
     accomplishment.category.id,
   );
 
-  const [availableTags, setAvailableTags] = useState<FormTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<FormTag[]>(
     accomplishment.tags.map((t) => ({
       id: t.tag.id,
       name: t.tag.name,
-      color: t.tag.color || "#6B7280",
+      color: t.tag.color || DEFAULT_COLOR,
     })),
   );
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
   const [customTagInput, setCustomTagInput] = useState("");
 
-  useEffect(() => {
-    const loadData = async () => {
-      const fetchedCategories = await getCategories();
-      const filteredCategories = fetchedCategories.map((cat) => ({
+  // Derived from props rather than fetched on mount — this dialog opens over an
+  // already-loaded list, so its dropdowns should be usable immediately.
+  const categories = useMemo(
+    () =>
+      categoryOptions.map((cat) => ({
         ...cat,
-        color: cat.color || "#6B7280",
-      }));
-      setCategories(filteredCategories);
+        color: cat.color || DEFAULT_COLOR,
+      })),
+    [categoryOptions],
+  );
 
-      const fetchedTags = await getExistingTags();
-      const filteredTags = fetchedTags.map((tag) => ({
-        ...tag,
-        color: tag.color || "#6B7280",
-      }));
-      setAvailableTags(filteredTags);
-    };
-    loadData();
-  }, []);
+  const availableTags = useMemo<FormTag[]>(
+    () =>
+      tagOptions.map((tag) => ({ ...tag, color: tag.color || DEFAULT_COLOR })),
+    [tagOptions],
+  );
 
   const handleCategoryChange = (value: string) => {
     if (value === "create-new") {
@@ -112,7 +116,7 @@ export function EditAccomplishmentForm({
       const newTag: FormTag = {
         id: `custom-${Date.now()}`,
         name: customTagInput.trim(),
-        color: "#6B7280",
+        color: DEFAULT_COLOR,
       };
       setSelectedTags([...selectedTags, newTag]);
       setCustomTagInput("");
