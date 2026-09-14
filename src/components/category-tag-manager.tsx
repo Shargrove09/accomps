@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Edit2, Trash2, X } from "lucide-react";
+import { Check, Edit2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   btnDanger,
@@ -102,36 +102,56 @@ export function CategoryTagManager({
           {items.map((item) => (
             <div
               key={item.id}
+              onClick={bulkEnabled ? () => toggle(item.id) : undefined}
               className={`bg-ebony-clay rounded-lg shadow-sm border p-6 text-center transition-colors group relative ${
+                bulkEnabled ? "cursor-pointer " : ""
+              }${
                 selected.has(item.id)
-                  ? "border-blue-500 ring-1 ring-blue-500"
+                  ? "border-blue-500 ring-1 ring-blue-500 "
                   : "border-kimberly hover:border-blue-600"
               }`}
             >
               {bulkEnabled && (
                 // Always visible, unlike the hover-revealed actions — otherwise
                 // there's no way to discover that bulk selection exists.
-                <label className="absolute top-2 left-2 flex items-center cursor-pointer p-1.5">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(item.id)}
-                    onChange={() => toggle(item.id)}
-                    aria-label={`Select ${item.name}`}
-                    className="h-4 w-4 rounded border-kimberly bg-east-bay text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  />
+                <label
+                  className="absolute top-2 left-2 flex items-center cursor-pointer p-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* appearance-none + our own check: the native checked box
+                      ignores border-radius and colors. */}
+                  <span className="relative flex h-4 w-4">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(item.id)}
+                      onChange={() => toggle(item.id)}
+                      aria-label={`Select ${item.name}`}
+                      className="peer h-4 w-4 appearance-none rounded border border-kimberly bg-east-bay transition-colors checked:border-blue-500 checked:bg-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+                    />
+                    <Check
+                      strokeWidth={3}
+                      className="pointer-events-none absolute inset-0 m-auto h-3 w-3 text-white opacity-0 peer-checked:opacity-100"
+                    />
+                  </span>
                 </label>
               )}
 
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                  onClick={() => setEditing(item)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(item);
+                  }}
                   className="p-1.5 text-blue-400 hover:bg-east-bay rounded-md transition-colors hover:cursor-pointer"
                   title={`Edit ${label.toLowerCase()}`}
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => setDeleting(item)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleting(item);
+                  }}
                   className="p-1.5 text-red-400 hover:bg-east-bay rounded-md transition-colors hover:cursor-pointer"
                   title={`Delete ${label.toLowerCase()}`}
                 >
@@ -147,6 +167,7 @@ export function CategoryTagManager({
                 {hrefBase ? (
                   <Link
                     href={`${hrefBase}${item.name}`}
+                    onClick={(e) => e.stopPropagation()}
                     className="font-semibold hover:underline"
                     style={{ color: item.color ?? "#ffffff" }}
                   >
@@ -370,7 +391,8 @@ function BulkActionDialog({
                   adding up the counts would overstate the result. */}
               <p className={dialogText}>
                 The target will be applied to every accomplishment that had any
-                of these tags; duplicates collapse. The {items.length} merged tag
+                of these tags; duplicates collapse. The {items.length} merged
+                tag
                 {items.length !== 1 ? "s" : ""} will then be deleted.
               </p>
             </>
@@ -503,9 +525,8 @@ function EditItemDialog({
                   onClick={() => setColor(c)}
                   className={cn(
                     "h-8 w-8 rounded-full transition-transform hover:scale-110 hover:cursor-pointer",
-                    // Offset ring matches the panel, so the halo reads as a gap.
                     color === c &&
-                      "ring-2 ring-mischka ring-offset-2 ring-offset-ebony-clay"
+                      "ring-2 ring-mischka ring-offset-2 ring-offset-ebony-clay",
                   )}
                   style={{ backgroundColor: c }}
                   aria-label={`Select color ${c}`}
@@ -616,7 +637,9 @@ function DeleteItemDialog({
                 className={fieldInput}
               >
                 <option value="">
-                  {mustMerge ? "Select a target..." : `Don't merge — just delete`}
+                  {mustMerge
+                    ? "Select a target..."
+                    : `Don't merge — just delete`}
                 </option>
                 {others.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -640,11 +663,7 @@ function DeleteItemDialog({
             disabled={isPending || (mustMerge && !targetId)}
             className={btnDanger}
           >
-            {isPending
-              ? "Working..."
-              : targetId
-                ? "Merge & Delete"
-                : "Delete"}
+            {isPending ? "Working..." : targetId ? "Merge & Delete" : "Delete"}
           </button>
         </div>
       </div>
