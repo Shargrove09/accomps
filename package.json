@@ -18,14 +18,14 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.523.0",
-    "next": "16.0.9",
+    "next": "16.3.3",
     "pg": "^8.16.3",
-    "prisma": "^7.3.0",
+    "prisma": "^7.10.0",
     "react": "19.2.2",
     "react-big-calendar": "^1.19.4",
     "react-dom": "19.2.2",
     "recharts": "^3.0.0",
-    "resend": "^6.6.0",
+    "resend": "^6.28.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
