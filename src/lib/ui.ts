@@ -68,6 +68,11 @@ export const chipIdle = `${chipSurface} text-mischka/85 hover:border-kimberly ho
 const CHIP_FALLBACK = "#6B7280";
 const INK_DARK = "#1e1e2f"; /* steel-gray */
 
+/** A stored hex color, or the neutral fallback when it is missing or malformed. */
+export function safeColor(color: string | null | undefined) {
+  return /^#[0-9a-f]{6}$/i.test(color ?? "") ? color! : CHIP_FALLBACK;
+}
+
 function luminance(hex: string) {
   const [r, g, b] = [1, 3, 5].map((i) => {
     const c = parseInt(hex.slice(i, i + 2), 16) / 255;
@@ -78,7 +83,7 @@ function luminance(hex: string) {
 
 /** Whichever of dark/white ink has higher contrast on `color` (white fails on amber/lime). */
 export function inkOn(color: string | null | undefined) {
-  const c = /^#[0-9a-f]{6}$/i.test(color ?? "") ? color! : CHIP_FALLBACK;
+  const c = safeColor(color);
   const l = luminance(c);
   return (l + 0.05) / (luminance(INK_DARK) + 0.05) >= 1.05 / (l + 0.05)
     ? INK_DARK
@@ -87,6 +92,6 @@ export function inkOn(color: string | null | undefined) {
 
 /** A selected chip fills with its own stored color: color answers the click. */
 export function chipOnStyle(color: string | null | undefined) {
-  const c = /^#[0-9a-f]{6}$/i.test(color ?? "") ? color! : CHIP_FALLBACK;
+  const c = safeColor(color);
   return { backgroundColor: c, borderColor: c, color: inkOn(c) };
 }

@@ -108,16 +108,16 @@
   );
   --rbc-text: var(--color-mischka);
   --rbc-text-muted: var(--muted-foreground);
-  --rbc-accent: var(--color-blue-600);
-  --rbc-accent-hi: var(--color-blue-500);
-  --rbc-accent-link: var(--color-blue-400);
-  --rbc-accent-ring: var(--color-blue-300);
+  --rbc-accent: var(--color-periwinkle);
+  --rbc-accent-hi: var(--color-periwinkle);
+  --rbc-accent-link: var(--color-periwinkle);
+  --rbc-accent-ring: var(--color-periwinkle);
   --rbc-today-bg: color-mix(
     in oklab,
-    var(--color-blue-600) 18%,
+    var(--color-periwinkle) 14%,
     var(--color-ebony-clay)
   );
-  --rbc-today-ring: color-mix(in oklab, var(--color-blue-500) 45%, transparent);
+  --rbc-today-ring: color-mix(in oklab, var(--color-periwinkle) 45%, transparent);
 }
 
 /* Grid surfaces. .rbc-day-bg has no background in the library at all, so this
@@ -180,201 +180,37 @@
   color: var(--rbc-text);
 }
 
-/* Toolbar buttons need more than a colour swap, and all four state rules must
-   be mirrored: they leapfrog each other on specificity, so dropping any one
-   lets a light-theme rule back in. Order matches the library's own. */
-.rbc-toolbar button {
+/* Events: a neutral chip; the category-colored left spine is an inline border. */
+.rbc-event {
+  background-color: color-mix(in oklab, var(--color-east-bay) 45%, transparent);
+  border-radius: 4px;
   color: var(--rbc-text);
-  background-color: transparent;
-  border-color: var(--rbc-border);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
-/* box-shadow must be reset — the library stacks an inset black shadow here
-   that reads as mud on a dark fill. */
-.rbc-toolbar button:active,
-.rbc-toolbar button.rbc-active {
-  box-shadow: none;
-  background-color: var(--rbc-accent);
-  border-color: var(--rbc-accent);
-  color: #fff;
-}
-
-/* Without this, the active view button reverts to #d4d4d4 while it holds focus. */
-.rbc-toolbar button:active:hover,
-.rbc-toolbar button:active:focus,
-.rbc-toolbar button.rbc-active:hover,
-.rbc-toolbar button.rbc-active:focus {
-  color: #fff;
-  background-color: var(--rbc-accent-hi);
-  border-color: var(--rbc-accent-hi);
-}
-
-/* Mirrored back to the resting look on purpose: the library makes :focus
-   identical to :hover, so a mouse-clicked button stays visually hovered. The
-   real keyboard affordance is the :focus-visible ring below. */
-.rbc-toolbar button:focus {
-  color: var(--rbc-text);
-  background-color: transparent;
-  border-color: var(--rbc-border);
-}
-
-.rbc-toolbar button:hover {
-  color: var(--rbc-text);
-  background-color: var(--rbc-raised);
-  border-color: var(--rbc-border);
-}
-
-.rbc-toolbar button:focus-visible {
-  outline: 2px solid var(--rbc-accent-ring);
-  outline-offset: 2px;
-}
-
-/* Events */
-.rbc-event,
-.rbc-day-slot .rbc-background-event {
-  background-color: var(--rbc-accent);
-  color: #fff;
-}
-
-/* The library darkens for selection (#3174ad -> #265985). On a dark canvas a
-   darker fill reads as disabled, so brighten and ring instead. */
-.rbc-event.rbc-selected,
-.rbc-day-slot .rbc-selected.rbc-background-event {
-  background-color: var(--rbc-accent-hi);
-  box-shadow: inset 0 0 0 1px var(--rbc-accent-ring);
-}
-
-/* `outline: 5px auto` hands the ring to the UA, which discards the declared
-   colour — the whole shorthand has to go, not just outline-color. */
-.rbc-event:focus,
-.rbc-day-slot .rbc-background-event:focus {
+/* `outline: 5px auto` hands the ring to the UA, so the whole shorthand goes. */
+.rbc-event:focus {
   outline: 2px solid var(--rbc-accent-ring);
   outline-offset: 1px;
 }
 
-/* A soft grey shadow does no separating work against a dark backdrop. */
-.rbc-event-overlaps {
-  box-shadow:
-    -1px 0 0 0 color-mix(in oklab, var(--color-mischka) 22%, transparent),
-    -1px 1px 5px 0 rgb(0 0 0 / 0.55);
+.rbc-date-cell {
+  text-align: left;
+  padding: 0;
 }
 
-.rbc-day-slot .rbc-event,
-.rbc-day-slot .rbc-background-event {
-  border-color: var(--rbc-accent-hi);
+.rbc-row-segment {
+  padding: 0 2px 2px;
 }
 
-/* "+N more" and its popup. The popup is portaled to document.body, which is
-   why none of this is scoped to a calendar-root selector. */
 .rbc-show-more {
-  background-color: color-mix(in oklab, var(--color-east-bay) 70%, transparent);
+  background-color: transparent;
   color: var(--rbc-accent-link);
 }
 
 .rbc-show-more:hover,
 .rbc-show-more:focus {
   color: var(--rbc-accent-ring);
-}
-
-.rbc-overlay {
-  background-color: var(--rbc-surface-low);
-  border-color: var(--rbc-border);
-  color: var(--rbc-text);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.55);
-}
-
-.rbc-overlay-header {
-  border-bottom-color: var(--rbc-grid-line);
-}
-
-/* Agenda view */
-.rbc-agenda-view table.rbc-agenda-table {
-  border-color: var(--rbc-border);
-}
-
-.rbc-agenda-view table.rbc-agenda-table tbody > tr > td + td {
-  border-left-color: var(--rbc-grid-line);
-}
-
-.rbc-agenda-view table.rbc-agenda-table tbody > tr + tr {
-  border-top-color: var(--rbc-grid-line);
-}
-
-.rbc-agenda-view table.rbc-agenda-table thead > tr > th {
-  border-bottom-color: var(--rbc-border);
-}
-
-.rbc-agenda-view table.rbc-agenda-table .rbc-agenda-date-cell,
-.rbc-agenda-view table.rbc-agenda-table .rbc-agenda-time-cell {
-  color: var(--rbc-text-muted);
-}
-
-.rbc-agenda-empty {
-  color: var(--rbc-text-muted);
-}
-
-/* Time views (week / day) */
-.rbc-time-view {
-  border-color: var(--rbc-border);
-}
-
-.rbc-time-view .rbc-allday-cell + .rbc-allday-cell {
-  border-left-color: var(--rbc-grid-line);
-}
-
-.rbc-time-header.rbc-overflowing {
-  border-right-color: var(--rbc-border);
-}
-
-.rbc-time-header > .rbc-row:first-child,
-.rbc-time-header > .rbc-row.rbc-row-resource {
-  border-bottom-color: var(--rbc-border);
-}
-
-.rbc-time-header-content {
-  border-left-color: var(--rbc-grid-line);
-}
-
-.rbc-time-header-content > .rbc-row.rbc-row-resource {
-  border-bottom-color: var(--rbc-border);
-}
-
-.rbc-time-content {
-  border-top-color: var(--rbc-border);
-}
-
-.rbc-time-content > * + * > * {
-  border-left-color: var(--rbc-grid-line);
-}
-
-.rbc-timeslot-group {
-  border-bottom-color: var(--rbc-grid-line);
-}
-
-.rbc-day-slot .rbc-time-slot {
-  border-top-color: var(--rbc-grid-line-faint);
-}
-
-.rbc-time-gutter .rbc-label {
-  color: var(--rbc-text-muted);
-}
-
-/* position: sticky, so this must stay opaque — only recolour it. */
-.rbc-time-view-resources .rbc-time-gutter,
-.rbc-time-view-resources .rbc-time-header-gutter {
-  background-color: var(--rbc-surface);
-  border-right-color: var(--rbc-border);
-}
-
-.rbc-slot-selection {
-  background-color: color-mix(in oklab, var(--color-blue-600) 60%, transparent);
-  color: var(--rbc-text);
-}
-
-/* Library ships #74ad31 green; one step lighter than the event fill so it stays
-   legible crossing an event block. */
-.rbc-current-time-indicator {
-  background-color: var(--rbc-accent-link);
 }
 
 :root {

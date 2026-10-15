@@ -1,16 +1,14 @@
-import AccomplishmentsCalendar from "@/components/accomplishments-calendar";
+import { CalendarView } from "@/components/calendar/calendar-view";
 import { db } from "@/lib/db";
 
 // Mark this page as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
-  const accomplishments = await db.accomplishment.findMany();
+  const entries = await db.accomplishment.findMany({
+    include: { category: true, tags: { include: { tag: true } } },
+    orderBy: { date: "desc" },
+  });
 
-  return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Accomplishments Calendar</h1>
-      <AccomplishmentsCalendar accomplishments={accomplishments} />
-    </div>
-  );
+  return <CalendarView entries={entries} />;
 }
