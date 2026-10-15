@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { UNKNOWN_CATEGORY } from "@/lib/api-response";
 import { subDays } from "date-fns";
-import { localDayKey, startOfWeekLocal, todayLocal } from "@/lib/analytics-period";
+import { localDayKey, resolveEntryDate, startOfWeekLocal, todayLocal } from "@/lib/analytics-period";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -182,12 +182,15 @@ export async function addAccomplishment({
   description,
   category,
   tags,
+  date,
   allowNewCategory = false,
 }: {
   title: string;
   description?: string;
   category: string;
   tags: string[];
+  /** Optional YYYY-MM-DD the accomplishment happened; defaults to now. */
+  date?: string;
   /**
    * Opt in to creating the category if it doesn't exist. Defaults to false so
    * that any caller which hasn't thought about it fails closed; the web form
@@ -205,6 +208,11 @@ export async function addAccomplishment({
     return { success: false, error: validationError };
   }
 
+  const entryDate = resolveEntryDate(date);
+  if (!entryDate) {
+    return { success: false, error: "Date must be a valid YYYY-MM-DD that is not in the future" };
+  }
+
   try {
     const resolved = await resolveCategory(category, allowNewCategory);
     if (!resolved.category) {
@@ -220,7 +228,7 @@ export async function addAccomplishment({
       data: {
         title,
         description,
-        date: new Date(),
+        date: entryDate,
         categoryId: resolved.category.id,
       },
     });

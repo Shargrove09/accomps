@@ -26,6 +26,7 @@ export function AddAccomplishmentForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [date, setDate] = useState(""); // empty = today
   const [isGenerating, setIsGenerating] = useState(false);
 
   // New state for category management
@@ -135,6 +136,7 @@ export function AddAccomplishmentForm({
         description: finalDescription || undefined,
         category: category.trim(),
         tags: tagNames,
+        date: date || undefined,
         // The form's "+ Create New Category" option is a deliberate human
         // choice, so this path opts in. The agent API does not.
         allowNewCategory: true,
@@ -144,6 +146,7 @@ export function AddAccomplishmentForm({
       setTitle("");
       setDescription("");
       setCategory("");
+      setDate("");
       setSelectedCategoryId("");
       setIsCreatingNewCategory(false);
       setSelectedTags([]);
@@ -219,6 +222,20 @@ export function AddAccomplishmentForm({
             </div>
           )}
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="date" className={fieldLabel}>
+          Date
+        </label>
+        <input
+          type="date"
+          id="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className={cn(fieldInput, "md:max-w-xs")}
+        />
+        <p className="mt-1 text-xs text-ink-muted">Leave blank for today.</p>
       </div>
 
       <div>
