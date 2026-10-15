@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { accomplishmentRangeHref } from "@/lib/accomplishment-query";
 import { bucketLabel } from "@/lib/analytics-period";
 import { cn } from "@/lib/utils";
 import type { AnalyticsSummary } from "@/lib/analytics";
@@ -15,18 +17,24 @@ export function ConsistencyHeatmap({ data }: { data: AnalyticsSummary["heatmap"]
     <>
       <div className="scroll-slim fade-x overflow-x-auto pb-2">
         <div
-          role="img"
-          aria-label={`${total} accomplishments across ${active} active days in the last year`}
+          role="group"
+          aria-label={`${total} accomplishments across ${active} active days in the last year. Select a day to see its entries.`}
           className="grid w-max grid-flow-col grid-rows-7 gap-1"
         >
           {days.map((d) => {
             const inPeriod = d.date >= periodStart && d.date < periodEnd;
+            const cls = cn("h-3 w-3 rounded-sm", d.count === 0 && "bg-east-bay/30", inPeriod && "ring-1 ring-mischka/40");
+            const title = `${bucketLabel(d.date, "day")} ${d.date.slice(0, 4)} · ${d.count} ${d.count === 1 ? "entry" : "entries"}`;
+            if (d.count === 0) return <span key={d.date} title={title} className={cls} />;
             return (
-              <span
+              <Link
                 key={d.date}
-                title={`${bucketLabel(d.date, "day")} ${d.date.slice(0, 4)} · ${d.count} ${d.count === 1 ? "entry" : "entries"}`}
-                className={cn("h-3 w-3 rounded-sm", d.count === 0 && "bg-east-bay/30", inPeriod && "ring-1 ring-mischka/40")}
-                style={d.count > 0 ? { backgroundColor: shade(25 + 75 * Math.min(1, d.count / max)) } : undefined}
+                href={accomplishmentRangeHref(d.date, d.date)}
+                prefetch={false}
+                title={title}
+                aria-label={title}
+                className={cn(cls, "hover:ring-1 hover:ring-mischka focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500")}
+                style={{ backgroundColor: shade(25 + 75 * Math.min(1, d.count / max)) }}
               />
             );
           })}

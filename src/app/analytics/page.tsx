@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import { getAnalytics } from "@/lib/analytics";
-import { analyticsHref, parseAnalyticsSearch, type AnalyticsSearch } from "@/lib/analytics-period";
+import { analyticsHref, localDayKey, parseAnalyticsSearch, type AnalyticsSearch } from "@/lib/analytics-period";
 import { EmptyAnalytics } from "@/components/analytics/empty-analytics";
 import { ActivityChartLoader } from "@/components/analytics/activity-chart-loader";
 import { ConsistencyHeatmap } from "@/components/analytics/consistency-heatmap";
+import { CustomRange } from "@/components/analytics/custom-range";
 import { KpiRow } from "@/components/analytics/kpi-row";
 import { Panel } from "@/components/analytics/panel";
 import { PeriodChips } from "@/components/analytics/period-chips";
+import { StackedChartLoader } from "@/components/analytics/stacked-chart-loader";
 import { RankedBars } from "@/components/analytics/ranked-bars";
 import { WeekRhythm } from "@/components/analytics/week-rhythm";
 
@@ -39,13 +41,26 @@ async function Body({ search, now }: { search: AnalyticsSearch; now: Date }) {
         </div>
       )}
       <KpiRow data={data} showDeltas={showDeltas} />
-      <Panel title="Activity over time" hint={`${period.label} · per ${period.bucket}`}>
+      <Panel title="Activity over time" hint={`${period.label} · per ${period.bucket} · select a bar to see its entries`}>
         <ActivityChartLoader
-          data={series.map((s) => ({ label: s.label, count: s.count, prev: s.prevCount, avg: s.avg }))}
+          data={series.map((s) => ({ label: s.label, count: s.count, prev: s.prevCount, avg: s.avg, href: s.href }))}
           avgLabel={AVG_LABEL[period.bucket]}
           summary={summary}
         />
       </Panel>
+      {!sparse && data.stackCategories.length >= 2 && (
+        <Panel title="Category mix over time" hint={`Top categories per ${period.bucket}${data.stackCategories.some((c) => c.id === "other") ? ", the rest grouped as Other" : ""}`}>
+          <StackedChartLoader
+            categories={data.stackCategories}
+            summary={`Accomplishments per ${period.bucket} split by category`}
+            data={series.map((s) => ({
+              label: s.label,
+              href: s.href,
+              ...Object.fromEntries(data.stackCategories.map((c) => [`c_${c.id}`, s.cats[c.id] ?? 0])),
+            }))}
+          />
+        </Panel>
+      )}
       <Panel title="Consistency" hint="Last 12 months · outlined days fall in the selected period">
         <ConsistencyHeatmap data={{ ...data.heatmap, periodStart: period.startKey, periodEnd: period.endKey }} />
       </Panel>
@@ -86,7 +101,10 @@ export default async function AnalyticsPage({
         <h1 className="mb-2 text-3xl font-bold text-mischka">Analytics</h1>
         <p className="text-kimberly">Trends and patterns across your accomplishments.</p>
       </div>
-      <PeriodChips search={search} />
+      <div className="space-y-3">
+        <PeriodChips search={search} />
+        <CustomRange search={search} todayKey={localDayKey(now)} />
+      </div>
       {/* Keyed so a period change shows the skeleton instead of stale panels. */}
       <Suspense key={analyticsHref(search)} fallback={<div className="h-96 animate-pulse rounded-lg bg-east-bay/30" />}>
         <Body search={search} now={now} />

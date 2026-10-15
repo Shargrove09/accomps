@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { db } from "@/lib/db";
+import { accomplishmentRangeHref } from "@/lib/accomplishment-query";
 import {
   DOW_LABELS,
   addDaysKey,
@@ -19,6 +20,7 @@ import {
 const HEATMAP_WEEKS = 53;
 const SPARSE_ENTRIES = 10;
 const SPARSE_DAYS = 14;
+const STACK_TOP = 5;
 const AVG_WINDOW: Record<Bucket, number> = { day: 7, week: 4, month: 3 };
 
 /** pct is null when previous is 0, so the UI renders "New" rather than Infinity%. */
@@ -34,7 +36,19 @@ export type AnalyticsSummary = {
     longestStreak: { length: number; endDate: string | null };
   };
   /** Zero-filled and dense: one entry per bucket, never gaps. */
-  series: { key: string; label: string; count: number; prevCount: number; avg: number | null }[];
+  series: {
+    key: string;
+    label: string;
+    count: number;
+    prevCount: number;
+    avg: number | null;
+    /** Entries per stack category id in this bucket. */
+    cats: Record<string, number>;
+    /** The accomplishments list filtered to this bucket. */
+    href: string;
+  }[];
+  /** Top categories plus an "other" remainder, for the stacked chart. */
+  stackCategories: { id: string; name: string; color: string | null }[];
   heatmap: { days: { date: string; count: number }[]; max: number; startDate: string };
   byCategory: { id: string; name: string; color: string | null; count: number; prevCount: number; share: number }[];
   byTag: { id: string; name: string; color: string | null; count: number; prevCount: number }[];
@@ -78,6 +92,14 @@ function longestRun(sortedKeys: string[]): { length: number; endDate: string | n
   return best;
 }
 
+/** Inclusive local-day span a bucket covers. */
+function bucketSpan(key: string, bucket: Bucket): [string, string] {
+  if (bucket === "day") return [key, key];
+  if (bucket === "week") return [key, addDaysKey(key, 6)];
+  const [y, m] = key.split("-").map(Number);
+  return [`${key}-01`, new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10)];
+}
+
 function currentRun(daySet: Set<string>, todayKey: string): number {
   let cursor = daySet.has(todayKey) ? todayKey : addDaysKey(todayKey, -1); // a streak may end yesterday
   let n = 0;
@@ -95,6 +117,7 @@ export const EMPTY_ANALYTICS = (search: AnalyticsSearch, now: Date): AnalyticsSu
     period,
     kpis: { total: zero, activeDays: zero, perActiveDay: zero, currentStreak: 0, longestStreak: { length: 0, endDate: null } },
     series: [],
+    stackCategories: [],
     heatmap: { days: [], max: 4, startDate: period.startKey },
     byCategory: [],
     byTag: [],
@@ -169,14 +192,41 @@ export const getAnalytics = cache(
       const curBuckets = bucketsOf(period.startKey, period.endKey, curDayCounts);
       const prevBuckets = bucketsOf(period.prevStartKey, period.startKey, prevDayCounts);
       const win = AVG_WINDOW[period.bucket];
+
+      const catTotals = countBy(cur, (e) => e.categoryId);
+      const ranked = cats
+        .map((c) => ({ ...c, n: catTotals.get(c.id) ?? 0 }))
+        .filter((c) => c.n > 0)
+        .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+      const topIds = new Set(ranked.slice(0, STACK_TOP).map((c) => c.id));
+      const stackCategories = [
+        ...ranked.slice(0, STACK_TOP).map(({ id, name, color }) => ({ id, name, color })),
+        ...(ranked.length > STACK_TOP ? [{ id: "other", name: "Other", color: null }] : []),
+      ];
+      const catsByBucket = new Map<string, Record<string, number>>();
+      for (const e of cur) {
+        const b = bucketKey(e.key, period.bucket);
+        const id = topIds.has(e.categoryId) ? e.categoryId : "other";
+        const row = catsByBucket.get(b) ?? {};
+        row[id] = (row[id] ?? 0) + 1;
+        catsByBucket.set(b, row);
+      }
+
+      const lastKey = addDaysKey(period.endKey, -1);
       const series = curBuckets.map(([key, count], i) => {
         const slice = curBuckets.slice(Math.max(0, i - win + 1), i + 1);
+        const [spanFrom, spanTo] = bucketSpan(key, period.bucket);
         return {
           key,
           label: bucketLabel(key, period.bucket),
           count,
           prevCount: prevBuckets[i]?.[1] ?? 0,
           avg: round1(slice.reduce((s, [, c]) => s + c, 0) / slice.length),
+          cats: catsByBucket.get(key) ?? {},
+          href: accomplishmentRangeHref(
+            spanFrom < period.startKey ? period.startKey : spanFrom,
+            spanTo > lastKey ? lastKey : spanTo,
+          ),
         };
       });
 
@@ -237,6 +287,7 @@ export const getAnalytics = cache(
           longestStreak: longestRun(sortedDays),
         },
         series,
+        stackCategories,
         heatmap: { days: heatDays, max: Math.max(4, p90), startDate: heatStartKey },
         byCategory,
         byTag,

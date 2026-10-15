@@ -127,13 +127,27 @@ export function AccomplishmentFilters({
       next.delete("q");
       next.delete("cat");
       next.delete("tag");
+      next.delete("from");
+      next.delete("to");
+    });
+  };
+
+  const setDay = (key: "from" | "to", value: string) => {
+    commit((next) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
     });
   };
 
   const selectedCategories = params.getAll("cat");
   const selectedTags = params.getAll("tag");
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? "";
   const activeCount =
-    (params.get("q") ? 1 : 0) + selectedCategories.length + selectedTags.length;
+    (params.get("q") ? 1 : 0) +
+    selectedCategories.length +
+    selectedTags.length +
+    (from || to ? 1 : 0);
 
   return (
     <div className="p-4 border-b border-kimberly space-y-4">
@@ -171,6 +185,31 @@ export function AccomplishmentFilters({
           onToggle={(name) => toggle("tag", name)}
         />
       )}
+
+      <fieldset>
+        <legend className="text-sm font-medium text-ink-muted mb-2">Date range</legend>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+          <input
+            key={`from-${from}`}
+            type="date"
+            aria-label="From date"
+            defaultValue={from}
+            max={to || undefined}
+            onChange={(e) => setDay("from", e.target.value)}
+            className="rounded-md border border-kimberly bg-ebony-clay px-3 py-1.5 text-mischka focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          to
+          <input
+            key={`to-${to}`}
+            type="date"
+            aria-label="To date"
+            defaultValue={to}
+            min={from || undefined}
+            onChange={(e) => setDay("to", e.target.value)}
+            className="rounded-md border border-kimberly bg-ebony-clay px-3 py-1.5 text-mischka focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </fieldset>
 
       {activeCount > 0 && (
         <div className="flex items-center justify-between pt-2">
