@@ -41,6 +41,13 @@ const QUICK_ACTIONS = [
     description: "Organize and categorize your achievements",
     delay: "delay-150",
   },
+  {
+    href: "/analytics",
+    icon: TrendingUp,
+    title: "View Analytics",
+    description: "Track your progress and patterns",
+    delay: "delay-200",
+  },
 ];
 
 async function RecentAccomplishments({
@@ -178,17 +185,6 @@ export default async function Home() {
               </Link>
             );
           })}
-
-          <div className="relative rounded-lg border border-dashed border-kimberly bg-ebony-clay/60 p-6 text-center opacity-60">
-            <span className="absolute right-3 top-3 text-xs text-ink-muted">
-              Soon
-            </span>
-            <TrendingUp className="mx-auto mb-3 h-7 w-7 text-ink-muted" />
-            <h3 className="mb-2 font-semibold text-mischka">View Analytics</h3>
-            <p className="text-sm text-ink-muted">
-              Track your progress and patterns
-            </p>
-          </div>
         </div>
       </div>
     </div>

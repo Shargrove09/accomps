@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
+  BarChart3,
   Calendar,
   Tag,
   Folder,
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/accomplishments", label: "All Accomplishments", icon: ListChecks },
   { href: "/calendar", label: "Calendar", icon: Calendar },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/categories", label: "Categories", icon: Folder },
   { href: "/tags", label: "Tags", icon: Tag },
 ];
