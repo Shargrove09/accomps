@@ -3,11 +3,13 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { addAccomplishment, generateDescription } from "@/lib/actions";
-import { Plus, ChevronDown, X, Sparkles } from "lucide-react";
+import { Plus, X, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import type { CategoryOption, FormTag, TagOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { fieldInput, fieldLabel, fieldSelect } from "@/lib/ui";
+import { ColorDot } from "@/components/color-dot";
+import { Select } from "@/components/select";
+import { chipSurface, fieldInput, fieldLabel } from "@/lib/ui";
 
 /** Fallback for categories and tags stored without a colour. */
 const DEFAULT_COLOR = "#6B7280";
@@ -180,23 +182,15 @@ export function AddAccomplishmentForm({
           </label>
 
           {!isCreatingNewCategory && categories.length > 0 ? (
-            <div className="relative">
-              <select
-                value={selectedCategoryId}
-                onChange={(e) => handleCategoryChange(e.target.value)}
-                className={fieldSelect}
-                required
-              >
-                <option value="">Select a category...</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-                <option value="create-new">+ Create New Category</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
-            </div>
+            <Select
+              id="category"
+              required
+              value={selectedCategoryId}
+              onChange={handleCategoryChange}
+              placeholder="Select a category…"
+              options={categories.map((c) => ({ value: c.id, label: c.name, color: c.color }))}
+              action={{ label: "Create new category", onSelect: () => handleCategoryChange("create-new") }}
+            />
           ) : (
             <div className="space-y-2">
               <input
@@ -269,13 +263,9 @@ export function AddAccomplishmentForm({
               {selectedTags.map((tag) => (
                 <span
                   key={tag.id}
-                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm font-medium"
-                  style={{
-                    backgroundColor: tag.color + "26",
-                    borderColor: tag.color + "59",
-                    color: tag.color,
-                  }}
+                  className={`inline-flex items-center gap-2 rounded-md border py-1 pl-2.5 pr-1.5 text-sm text-mischka ${chipSurface}`}
                 >
+                  <ColorDot color={tag.color} />
                   {tag.name}
                   {/* Plain button, not <Button>: that carries a `bg-primary`
                       pill that would sit inside the tag chip. */}
@@ -283,7 +273,7 @@ export function AddAccomplishmentForm({
                     type="button"
                     onClick={() => handleTagRemove(tag.id)}
                     aria-label={`Remove ${tag.name}`}
-                    className="ml-1 rounded-full p-0.5 opacity-70 transition-opacity hover:bg-white/20 hover:opacity-100 hover:cursor-pointer"
+                    className="rounded p-0.5 text-ink-muted transition-colors hover:bg-east-bay hover:text-mischka hover:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -296,35 +286,17 @@ export function AddAccomplishmentForm({
           {!isAddingCustomTag ? (
             <div className="space-y-2">
               {availableTags.length > 0 && (
-                <div className="relative">
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value === "create-new") {
-                        setIsAddingCustomTag(true);
-                      } else if (e.target.value) {
-                        handleTagSelect(e.target.value);
-                      }
-                    }}
-                    className={fieldSelect}
-                  >
-                    <option value="">Select a tag to add...</option>
-                    {availableTags
-                      .filter(
-                        (tag) =>
-                          !selectedTags.find(
-                            (selected) => selected.id === tag.id,
-                          ),
-                      )
-                      .map((tag) => (
-                        <option key={tag.id} value={tag.id}>
-                          {tag.name}
-                        </option>
-                      ))}
-                    <option value="create-new">+ Create New Tag</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
-                </div>
+                <Select
+                  id="tags"
+                  keepOpen
+                  value=""
+                  onChange={handleTagSelect}
+                  placeholder="Select a tag to add…"
+                  options={availableTags
+                    .filter((tag) => !selectedTags.find((s) => s.id === tag.id))
+                    .map((t) => ({ value: t.id, label: t.name, color: t.color }))}
+                  action={{ label: "Create new tag", onSelect: () => setIsAddingCustomTag(true) }}
+                />
               )}
 
               {availableTags.length === 0 && (

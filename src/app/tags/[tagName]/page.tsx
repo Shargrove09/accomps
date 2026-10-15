@@ -1,6 +1,7 @@
 import { getAccomplishmentsByTag } from "@/lib/actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ColorDot } from "@/components/color-dot";
 
 // Mark this page as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ type AccomplishmentWithCategory = {
   date: Date;
   category: {
     name: string;
+    color: string | null;
   } | null;
 };
 
@@ -69,7 +71,8 @@ export default async function TagPage({
             <div className="flex items-center gap-4 text-sm text-kimberly">
               <span>{new Date(accomplishment.date).toLocaleDateString()}</span>
               {accomplishment.category && (
-                <span className="px-2 py-1 bg-blue-900/30 rounded">
+                <span className="inline-flex items-center gap-1.5">
+                  <ColorDot color={accomplishment.category.color} />
                   {accomplishment.category.name}
                 </span>
               )}

@@ -3,7 +3,9 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/helpers";
-import { Calendar, Tag, Edit2, Trash2 } from "lucide-react";
+import { Calendar, Edit2, Trash2 } from "lucide-react";
+import { ColorDot } from "@/components/color-dot";
+import { chipSurface } from "@/lib/ui";
 import { EditAccomplishmentForm } from "./edit-accomplishment-form";
 import { ConfirmDialog } from "./confirm-dialog";
 import { deleteAccomplishment, getAccomplishment } from "@/lib/actions";
@@ -95,11 +97,11 @@ export function AccomplishmentsList({
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-kimberly">
+        <div className="divide-y divide-kimberly/25">
           {accomplishments.map((accomplishment) => (
             <div
               key={accomplishment.id}
-              className="p-6 hover:bg-east-bay transition-colors group"
+              className="p-6 bg-[#242438] hover:bg-ebony-clay/60 transition-colors group"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -108,23 +110,20 @@ export function AccomplishmentsList({
                       {accomplishment.title}
                     </h3>
                     <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                      style={{
-                        backgroundColor:
-                          accomplishment.category.color || "#6B7280",
-                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs text-mischka/85 ${chipSurface}`}
                     >
+                      <ColorDot color={accomplishment.category.color} />
                       {accomplishment.category.name}
                     </span>
                   </div>
 
                   {accomplishment.description && (
-                    <p className="text-kimberly mb-3 leading-relaxed">
+                    <p className="text-ink-muted mb-3 leading-relaxed">
                       {accomplishment.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 text-sm text-kimberly">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {formatDate(accomplishment.date)}
@@ -132,7 +131,7 @@ export function AccomplishmentsList({
                         new Date(accomplishment.createdAt).getTime() >
                         1000 && (
                         <span
-                          className="text-xs text-steel-gray italic"
+                          className="text-xs text-ink-muted/70 italic"
                           title={`Last edited ${new Date(
                             accomplishment.updatedAt,
                           ).toLocaleString()}`}
@@ -143,37 +142,34 @@ export function AccomplishmentsList({
                     </div>
 
                     {accomplishment.tags.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Tag className="h-4 w-4" />
-                        <div className="flex gap-1">
-                          {accomplishment.tags.map(({ tag }) => (
-                            <span
-                              key={tag.id}
-                              className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium text-white"
-                              style={{
-                                backgroundColor: tag.color || "#6B7280",
-                              }}
-                            >
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        {accomplishment.tags.map(({ tag }) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center gap-1.5 text-xs text-ink-muted"
+                          >
+                            <ColorDot color={tag.color} />
+                            {tag.name}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="flex gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-2 ml-4 opacity-0 group-hover:opacity-100 focus-within:opacity-100 no-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEdit(accomplishment.id)}
-                    className="p-2 text-blue-400 hover:bg-ebony-clay rounded-md transition-colors hover:cursor-pointer"
+                    className="p-2 text-blue-400 hover:bg-ebony-clay rounded-md transition-colors hover:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ebony-clay"
+                    aria-label="Edit accomplishment"
                     title="Edit accomplishment"
                   >
                     <Edit2 className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(accomplishment.id)}
-                    className="p-2 text-red-400 hover:bg-ebony-clay rounded-md transition-colors hover:cursor-pointer"
+                    className="p-2 text-red-400 hover:bg-ebony-clay rounded-md transition-colors hover:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ebony-clay"
+                    aria-label="Delete accomplishment"
                     title="Delete accomplishment"
                   >
                     <Trash2 className="h-4 w-4" />

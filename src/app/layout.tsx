@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { AppShell } from "@/components/app-shell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,22 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-ebony-clay text-mischka min-h-screen`}
       >
         <SidebarNav />
-        <div className="min-h-screen">
-          <nav className="bg-east-bay shadow-sm border-b border-kimberly">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16">
-                <div className="flex items-center ml-16">
-                  <h1 className="text-xl font-bold text-mischka">
-                    Accomplishments Tracker
-                  </h1>
-                </div>
-              </div>
-            </div>
-          </nav>
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

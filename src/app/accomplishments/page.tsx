@@ -151,7 +151,7 @@ export default async function AccomplishmentsPage({
       <div className="bg-ebony-clay rounded-lg shadow-sm border border-kimberly">
         <div className="p-6 border-b border-kimberly">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
+            <TrendingUp className="h-5 w-5 text-ink-muted" />
             <h2 className="text-xl font-semibold text-mischka">
               Your Achievements
             </h2>

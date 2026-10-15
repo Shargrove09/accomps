@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Edit2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ColorDot } from "@/components/color-dot";
+import { Select } from "@/components/select";
 import {
   btnDanger,
   btnGhost,
@@ -103,7 +105,7 @@ export function CategoryTagManager({
             <div
               key={item.id}
               onClick={bulkEnabled ? () => toggle(item.id) : undefined}
-              className={`bg-ebony-clay rounded-lg shadow-sm border p-6 text-center transition-colors group relative ${
+              className={`bg-ebony-clay rounded-lg border p-6 text-center transition-colors group relative ${
                 bulkEnabled ? "cursor-pointer " : ""
               }${
                 selected.has(item.id)
@@ -136,13 +138,14 @@ export function CategoryTagManager({
                 </label>
               )}
 
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 no-hover:opacity-100 transition-opacity">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditing(item);
                   }}
-                  className="p-1.5 text-blue-400 hover:bg-east-bay rounded-md transition-colors hover:cursor-pointer"
+                  className="p-1.5 text-blue-400 hover:bg-east-bay rounded-md transition-colors hover:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ebony-clay"
+                  aria-label={`Edit ${label.toLowerCase()} ${item.name}`}
                   title={`Edit ${label.toLowerCase()}`}
                 >
                   <Edit2 className="h-4 w-4" />
@@ -152,40 +155,32 @@ export function CategoryTagManager({
                     e.stopPropagation();
                     setDeleting(item);
                   }}
-                  className="p-1.5 text-red-400 hover:bg-east-bay rounded-md transition-colors hover:cursor-pointer"
+                  className="p-1.5 text-red-400 hover:bg-east-bay rounded-md transition-colors hover:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ebony-clay"
+                  aria-label={`Delete ${label.toLowerCase()} ${item.name}`}
                   title={`Delete ${label.toLowerCase()}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className="flex items-center justify-center mb-3">
-                <div
-                  className="w-4 h-4 rounded-full mr-2"
-                  style={{ backgroundColor: item.color ?? "#ffffff" }}
-                />
+              <div className="flex items-start justify-center mb-3">
+                <ColorDot color={item.color} className="mr-2.5 mt-[0.45rem] h-2.5 w-2.5" />
                 {hrefBase ? (
                   <Link
                     href={`${hrefBase}${item.name}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-semibold hover:underline"
-                    style={{ color: item.color ?? "#ffffff" }}
+                    className="font-semibold text-mischka hover:underline"
                   >
                     {item.name}
                   </Link>
                 ) : (
-                  <h3
-                    className="font-semibold text-mischka"
-                    style={{ color: item.color ?? "#ffffff" }}
-                  >
-                    {item.name}
-                  </h3>
+                  <h3 className="font-semibold text-mischka">{item.name}</h3>
                 )}
               </div>
               {item.description && (
-                <p className="text-sm text-kimberly mb-2">{item.description}</p>
+                <p className="text-sm text-ink-muted mb-2">{item.description}</p>
               )}
-              <p className="text-sm text-steel-gray">
+              <p className="text-sm tabular-nums text-ink-muted">
                 {item.count} accomplishment{item.count !== 1 ? "s" : ""}
               </p>
             </div>
@@ -373,18 +368,12 @@ function BulkActionDialog({
             <>
               <div>
                 <label className={fieldLabel}>Merge into (required)</label>
-                <select
+                <Select
                   value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  className={fieldInput}
-                >
-                  <option value="">Select a target...</option>
-                  {targets.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.count})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setTargetId}
+                  placeholder="Select a target…"
+                  options={targets.map((t) => ({ value: t.id, label: t.name, color: t.color, hint: String(t.count) }))}
+                />
               </div>
               {/* No summed total here on purpose: an accomplishment carrying
                   several of the selected tags collapses to a single link, so
@@ -631,22 +620,13 @@ function DeleteItemDialog({
               <label className={fieldLabel}>
                 Merge into {mustMerge ? "(required)" : "(optional)"}
               </label>
-              <select
+              <Select
                 value={targetId}
-                onChange={(e) => setTargetId(e.target.value)}
-                className={fieldInput}
-              >
-                <option value="">
-                  {mustMerge
-                    ? "Select a target..."
-                    : `Don't merge — just delete`}
-                </option>
-                {others.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setTargetId}
+                placeholder={mustMerge ? "Select a target…" : "Don't merge — just delete"}
+                clearLabel={mustMerge ? undefined : "Don't merge — just delete"}
+                options={others.map((o) => ({ value: o.id, label: o.name, color: o.color }))}
+              />
             </div>
           )}
 

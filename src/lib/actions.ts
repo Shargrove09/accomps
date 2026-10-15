@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { UNKNOWN_CATEGORY } from "@/lib/api-response";
+import { startOfWeek } from "date-fns";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -419,8 +420,8 @@ export type AccomplishmentStats = {
     tags: number;
   };
   range: { startDate: string | null; endDate: string | null };
-  byCategory: { category: string; count: number }[];
-  byTag: { tag: string; count: number }[];
+  byCategory: { category: string; color: string | null; count: number }[];
+  byTag: { tag: string; color: string | null; count: number }[];
   trends: {
     perDay: { date: string; count: number }[];
     mostActiveDay: { date: string; count: number } | null;
@@ -465,8 +466,7 @@ export async function getAccomplishmentStats({
           }
         : {};
 
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
 
     const streakSince = new Date();
     streakSince.setDate(streakSince.getDate() - 366);
@@ -484,7 +484,7 @@ export async function getAccomplishmentStats({
     ] = await Promise.all([
       db.accomplishment.count(),
       db.accomplishment.count({ where: rangeFilter }),
-      db.accomplishment.count({ where: { date: { gte: weekAgo } } }),
+      db.accomplishment.count({ where: { date: { gte: weekStart } } }),
       db.category.count(),
       db.tag.count(),
       db.accomplishment.groupBy({
@@ -514,22 +514,24 @@ export async function getAccomplishmentStats({
     const [categories, tags] = await Promise.all([
       db.category.findMany({
         where: { id: { in: categoryGroups.map((g) => g.categoryId) } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, color: true },
       }),
       db.tag.findMany({
         where: { id: { in: tagGroups.map((g) => g.tagId) } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, color: true },
       }),
     ]);
-    const catName = new Map(categories.map((c) => [c.id, c.name]));
-    const tagName = new Map(tags.map((t) => [t.id, t.name]));
+    const catById = new Map(categories.map((c) => [c.id, c]));
+    const tagById = new Map(tags.map((t) => [t.id, t]));
 
     const byCategory = categoryGroups.map((g) => ({
-      category: catName.get(g.categoryId) ?? "Unknown",
+      category: catById.get(g.categoryId)?.name ?? "Unknown",
+      color: catById.get(g.categoryId)?.color ?? null,
       count: g._count._all,
     }));
     const byTag = tagGroups.map((g) => ({
-      tag: tagName.get(g.tagId) ?? "Unknown",
+      tag: tagById.get(g.tagId)?.name ?? "Unknown",
+      color: tagById.get(g.tagId)?.color ?? null,
       count: g._count._all,
     }));
 

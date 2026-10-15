@@ -25,9 +25,6 @@ const QUICK_ACTIONS = [
     icon: Calendar,
     title: "View Calendar",
     description: "See your accomplishments organized by date",
-    accent: "text-blue-400",
-    tint: "bg-blue-500/10",
-    hoverBorder: "hover:border-blue-500/70",
     delay: "delay-0",
   },
   {
@@ -35,9 +32,6 @@ const QUICK_ACTIONS = [
     icon: Folder,
     title: "Manage Categories",
     description: "Rename, recolor, and merge your categories",
-    accent: "text-purple-400",
-    tint: "bg-purple-500/10",
-    hoverBorder: "hover:border-purple-500/70",
     delay: "delay-75",
   },
   {
@@ -45,9 +39,6 @@ const QUICK_ACTIONS = [
     icon: Tag,
     title: "Manage Tags",
     description: "Organize and categorize your achievements",
-    accent: "text-orange-400",
-    tint: "bg-orange-500/10",
-    hoverBorder: "hover:border-orange-500/70",
     delay: "delay-150",
   },
 ];
@@ -95,7 +86,7 @@ export default async function Home() {
         <h1 className="text-3xl font-bold text-mischka mb-4">
           Track Your Daily Accomplishments
         </h1>
-        <p className="text-lg text-kimberly max-w-2xl mx-auto">
+        <p className="text-lg text-ink-muted max-w-2xl mx-auto">
           Record your achievements, organize them with tags and categories, and
           visualize your progress over time.
         </p>
@@ -120,7 +111,7 @@ export default async function Home() {
       {/* Add New Accomplishment */}
       <div className="bg-ebony-clay  rounded-lg shadow-sm border border-kimberly p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Plus className="h-5 w-5 text-blue-600" />
+          <Plus className="h-5 w-5 text-ink-muted" />
           <h2 className="text-xl font-semibold text-mischka">
             Add New Accomplishment
           </h2>
@@ -133,16 +124,16 @@ export default async function Home() {
         <div className="p-6 border-b border-kimberly ">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+              <TrendingUp className="h-5 w-5 text-ink-muted" />
               <h2 className="text-xl font-semibold text-mischka">
                 Recent Accomplishments
               </h2>
             </div>
             <Link
               href="/accomplishments"
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-sm text-ink-muted underline-offset-4 transition-colors hover:text-mischka hover:underline"
             >
-              View All →
+              View all
             </Link>
           </div>
         </div>
@@ -166,36 +157,22 @@ export default async function Home() {
                 className={cn(
                   "group relative overflow-hidden rounded-lg border border-kimberly bg-ebony-clay p-6 text-center",
                   "transition-[transform,border-color,box-shadow] duration-200 ease-out",
-                  "hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-steel-gray",
+                  "hover:-translate-y-1 hover:border-mischka/40 hover:shadow-lg hover:shadow-black/30",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ebony-clay",
                   "animate-in fade-in slide-in-from-bottom-3 animation-duration-500 fill-mode-backwards",
-                  action.hoverBorder,
                   action.delay,
                 )}
               >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "pointer-events-none absolute inset-x-0 -top-16 h-32 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100",
-                    action.tint,
-                  )}
-                />
-
                 <ArrowUpRight
                   aria-hidden="true"
                   className="absolute right-3 top-3 h-4 w-4 text-kimberly opacity-0 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100"
                 />
 
-                <Icon
-                  className={cn(
-                    "relative mx-auto mb-3 h-8 w-8 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110",
-                    action.accent,
-                  )}
-                />
+                <Icon className="relative mx-auto mb-3 h-7 w-7 text-periwinkle transition-transform duration-200 group-hover:-translate-y-0.5" />
                 <h3 className="relative mb-2 font-semibold text-mischka">
                   {action.title}
                 </h3>
-                <p className="relative text-sm text-mischka/70">
+                <p className="relative text-sm text-ink-muted">
                   {action.description}
                 </p>
               </Link>
@@ -203,12 +180,12 @@ export default async function Home() {
           })}
 
           <div className="relative rounded-lg border border-dashed border-kimberly bg-ebony-clay/60 p-6 text-center opacity-60">
-            <span className="absolute right-3 top-3 rounded-full bg-east-bay px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-mischka/80">
+            <span className="absolute right-3 top-3 text-xs text-ink-muted">
               Soon
             </span>
-            <TrendingUp className="mx-auto mb-3 h-8 w-8 text-green-400" />
+            <TrendingUp className="mx-auto mb-3 h-7 w-7 text-ink-muted" />
             <h3 className="mb-2 font-semibold text-mischka">View Analytics</h3>
-            <p className="text-sm text-mischka/70">
+            <p className="text-sm text-ink-muted">
               Track your progress and patterns
             </p>
           </div>

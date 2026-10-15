@@ -2,11 +2,74 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Search, X } from "lucide-react";
+import { Check, Loader2, Search, X } from "lucide-react";
+import { ColorDot } from "@/components/color-dot";
+import { chipBase, chipIdle, chipOnStyle, focusRing } from "@/lib/ui";
 import type { CategoryOption, TagOption } from "@/lib/types";
 
-const PILL_BASE =
-  "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all hover:cursor-pointer";
+/** How many chips a group shows before collapsing behind "+N more". */
+const COLLAPSED_COUNT = 10;
+
+function PillGroup({
+  label,
+  items,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  items: (CategoryOption | TagOption)[];
+  selected: string[];
+  onToggle: (name: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Keep source order, but never collapse an active chip.
+  const visible = expanded
+    ? items
+    : items.filter((it, i) => i < COLLAPSED_COUNT || selected.includes(it.name));
+  const hidden = items.length - visible.length;
+
+  return (
+    <div>
+      <label className="text-sm font-medium text-ink-muted mb-2 block">
+        {label}
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {visible.map((item) => {
+          const isSelected = selected.includes(item.name);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onToggle(item.name)}
+              className={`${chipBase} ${isSelected ? "font-medium" : chipIdle}`}
+              style={isSelected ? chipOnStyle(item.color) : undefined}
+            >
+              {isSelected ? (
+                <Check className="h-3 w-3" strokeWidth={3} />
+              ) : (
+                <ColorDot color={item.color} className="h-2.5 w-2.5" />
+              )}
+              {item.name}
+            </button>
+          );
+        })}
+
+        {(hidden > 0 || expanded) && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className={`inline-flex items-center rounded-md border border-dashed border-kimberly/40 px-3 py-1 text-sm text-ink-muted transition-colors hover:text-mischka hover:cursor-pointer ${focusRing}`}
+          >
+            {expanded ? "Show less" : `+${hidden} more`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function AccomplishmentFilters({
   categories,
@@ -92,72 +155,32 @@ export function AccomplishmentFilters({
       </div>
 
       {categories.length > 0 && (
-        <div>
-          <label className="text-sm font-medium text-kimberly mb-2 block">
-            Categories
-          </label>
-          <div className="flex flex-wrap gap-2 pt-1 pl-1 max-h-24 overflow-y-auto scroll-slim">
-            {categories.map((category) => {
-              const isSelected = selectedCategories.includes(category.name);
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => toggle("cat", category.name)}
-                  className={`${PILL_BASE} ${
-                    isSelected
-                      ? "text-white ring-2 ring-white"
-                      : "text-white opacity-60 hover:opacity-100"
-                  }`}
-                  style={{ backgroundColor: category.color || "#6B7280" }}
-                >
-                  {category.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <PillGroup
+          label="Categories"
+          items={categories}
+          selected={selectedCategories}
+          onToggle={(name) => toggle("cat", name)}
+        />
       )}
 
       {tags.length > 0 && (
-        <div>
-          <label className="text-sm font-medium text-kimberly mb-2 block">
-            Tags
-          </label>
-          <div className="flex flex-wrap gap-2 pt-1 pl-1 max-h-24 overflow-y-auto scroll-slim">
-            {tags.map((tag) => {
-              const isSelected = selectedTags.includes(tag.name);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => toggle("tag", tag.name)}
-                  className={`${PILL_BASE} ${
-                    isSelected
-                      ? "text-white ring-2 ring-white"
-                      : "text-white opacity-60 hover:opacity-100"
-                  }`}
-                  style={{ backgroundColor: tag.color || "#6B7280" }}
-                >
-                  {tag.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <PillGroup
+          label="Tags"
+          items={tags}
+          selected={selectedTags}
+          onToggle={(name) => toggle("tag", name)}
+        />
       )}
 
       {activeCount > 0 && (
         <div className="flex items-center justify-between pt-2">
-          <span className="text-sm text-kimberly">
+          <span className="text-sm text-kimberly tabular-nums">
             {activeCount} filter{activeCount !== 1 ? "s" : ""} active
           </span>
           <button
             type="button"
             onClick={clearAll}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-mischka bg-east-bay hover:bg-kimberly rounded-md transition-colors hover:cursor-pointer"
+            className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-mischka bg-east-bay hover:bg-kimberly rounded-md transition-colors hover:cursor-pointer ${focusRing}`}
           >
             <X className="h-4 w-4" />
             Clear Filters

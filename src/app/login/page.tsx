@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { btnPrimary, fieldInput } from "@/lib/ui";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
@@ -35,7 +35,7 @@ function LoginForm() {
       } else {
         setError(data.error || "Invalid password");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -43,17 +43,20 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-ebony-clay-950 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-steel-gray px-4">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-mischka-50">
+          <h1 className="text-center text-3xl font-bold tracking-tight text-mischka">
             Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-mischka-400">
+          </h1>
+          <p className="mt-2 text-center text-sm text-kimberly">
             Enter your password to access your accomplishments
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form
+          className="space-y-6 rounded-lg border border-kimberly bg-ebony-clay p-8 shadow-2xl shadow-black/50"
+          onSubmit={handleSubmit}
+        >
           <div>
             <label htmlFor="password" className="sr-only">
               Password
@@ -64,7 +67,7 @@ function LoginForm() {
               type="password"
               autoComplete="current-password"
               required
-              className="appearance-none rounded-md relative block w-full px-3 py-2 border border-ebony-clay-700 placeholder-mischka-500 text-mischka-50 bg-ebony-clay-900 focus:outline-none focus:ring-kimberly-500 focus:border-kimberly-500 focus:z-10 sm:text-sm"
+              className={fieldInput}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -74,15 +77,19 @@ function LoginForm() {
 
           {error && (
             <div className="rounded-md bg-red-900/20 border border-red-800 p-3">
-              <p className="text-sm text-red-400">{error}</p>
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
             </div>
           )}
 
-          <div>
-            <Button type="submit" disabled={isLoading} className="w-full">
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`${btnPrimary} w-full`}
+          >
+            {isLoading ? "Signing in..." : "Sign in"}
+          </button>
         </form>
       </div>
     </div>
@@ -93,8 +100,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-ebony-clay-950">
-          <div className="text-mischka-400">Loading...</div>
+        <div className="min-h-screen flex items-center justify-center bg-steel-gray">
+          <div className="text-kimberly">Loading...</div>
         </div>
       }
     >

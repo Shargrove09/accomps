@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { updateAccomplishment } from "@/lib/actions";
-import { X, ChevronDown } from "lucide-react";
+import { X } from "lucide-react";
 import type {
   AccomplishmentItem,
   CategoryOption,
@@ -10,16 +10,18 @@ import type {
   TagOption,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ColorDot } from "@/components/color-dot";
+import { Select } from "@/components/select";
 import {
   btnGhost,
   btnPrimary,
+  chipSurface,
   dialogClose,
   dialogOverlay,
   dialogPanel,
   dialogTitle,
   fieldInput,
   fieldLabel,
-  fieldSelect,
 } from "@/lib/ui";
 
 /** Convert a Date to the `YYYY-MM-DDTHH:mm` value a datetime-local input expects (local time). */
@@ -215,23 +217,15 @@ export function EditAccomplishmentForm({
                   </button>
                 </div>
               ) : (
-                <div className="relative">
-                  <select
-                    value={selectedCategoryId}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className={fieldSelect}
-                    required
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                    <option value="create-new">+ Create New Category</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
-                </div>
+                <Select
+                  id="category"
+                  required
+                  value={selectedCategoryId}
+                  onChange={handleCategoryChange}
+                  placeholder="Select a category…"
+                  options={categories.map((c) => ({ value: c.id, label: c.name, color: c.color }))}
+                  action={{ label: "Create new category", onSelect: () => handleCategoryChange("create-new") }}
+                />
               )}
             </div>
           </div>
@@ -271,16 +265,17 @@ export function EditAccomplishmentForm({
                 {selectedTags.map((tag) => (
                   <span
                     key={tag.id}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium text-white"
-                    style={{ backgroundColor: tag.color }}
+                    className={`inline-flex items-center gap-2 rounded-md border py-1 pl-2.5 pr-1.5 text-sm text-mischka ${chipSurface}`}
                   >
+                    <ColorDot color={tag.color} />
                     {tag.name}
                     <button
                       type="button"
                       onClick={() => handleTagRemove(tag.id)}
-                      className="ml-1 hover:bg-white/20 rounded-full p-0.5"
+                      aria-label={`Remove ${tag.name}`}
+                      className="rounded p-0.5 text-ink-muted transition-colors hover:bg-east-bay hover:text-mischka hover:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
-                      <X className="h-3 w-3 cursor-pointer" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 ))}
@@ -322,30 +317,16 @@ export function EditAccomplishmentForm({
                 </button>
               </div>
             ) : (
-              <div className="relative">
-                <select
-                  onChange={(e) => {
-                    if (e.target.value === "add-custom") {
-                      setIsAddingCustomTag(true);
-                    } else if (e.target.value) {
-                      handleTagSelect(e.target.value);
-                    }
-                    e.target.value = "";
-                  }}
-                  className={fieldSelect}
-                >
-                  <option value="">Add a tag...</option>
-                  {availableTags
-                    .filter((tag) => !selectedTags.find((t) => t.id === tag.id))
-                    .map((tag) => (
-                      <option key={tag.id} value={tag.id}>
-                        {tag.name}
-                      </option>
-                    ))}
-                  <option value="add-custom">+ Add Custom Tag</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-kimberly" />
-              </div>
+              <Select
+                keepOpen
+                value=""
+                onChange={handleTagSelect}
+                placeholder="Add a tag…"
+                options={availableTags
+                  .filter((tag) => !selectedTags.find((t) => t.id === tag.id))
+                  .map((t) => ({ value: t.id, label: t.name, color: t.color }))}
+                action={{ label: "Create new tag", onSelect: () => setIsAddingCustomTag(true) }}
+              />
             )}
           </div>
 
