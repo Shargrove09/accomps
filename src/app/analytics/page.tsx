@@ -3,9 +3,12 @@ import { getAnalytics } from "@/lib/analytics";
 import { analyticsHref, parseAnalyticsSearch, type AnalyticsSearch } from "@/lib/analytics-period";
 import { EmptyAnalytics } from "@/components/analytics/empty-analytics";
 import { ActivityChartLoader } from "@/components/analytics/activity-chart-loader";
+import { ConsistencyHeatmap } from "@/components/analytics/consistency-heatmap";
 import { KpiRow } from "@/components/analytics/kpi-row";
 import { Panel } from "@/components/analytics/panel";
 import { PeriodChips } from "@/components/analytics/period-chips";
+import { RankedBars } from "@/components/analytics/ranked-bars";
+import { WeekRhythm } from "@/components/analytics/week-rhythm";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,7 @@ async function Body({ search, now }: { search: AnalyticsSearch; now: Date }) {
   if (dataHealth.tier === "empty") return <EmptyAnalytics />;
 
   const sparse = dataHealth.tier === "sparse";
+  const showDeltas = !sparse;
   const summary = `${kpis.total.current} accomplishments over ${period.label.toLowerCase()}, by ${period.bucket}`;
 
   return (
@@ -34,7 +38,7 @@ async function Body({ search, now }: { search: AnalyticsSearch; now: Date }) {
           </div>
         </div>
       )}
-      <KpiRow data={data} showDeltas={!sparse} />
+      <KpiRow data={data} showDeltas={showDeltas} />
       <Panel title="Activity over time" hint={`${period.label} · per ${period.bucket}`}>
         <ActivityChartLoader
           data={series.map((s) => ({ label: s.label, count: s.count, prev: s.prevCount, avg: s.avg }))}
@@ -42,6 +46,28 @@ async function Body({ search, now }: { search: AnalyticsSearch; now: Date }) {
           summary={summary}
         />
       </Panel>
+      <Panel title="Consistency" hint="Last 12 months · outlined days fall in the selected period">
+        <ConsistencyHeatmap data={{ ...data.heatmap, periodStart: period.startKey, periodEnd: period.endKey }} />
+      </Panel>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Panel
+          title="Categories"
+          hint={showDeltas ? "Share of entries, change vs. previous period" : "Share of entries"}
+          className={sparse ? "lg:col-span-3" : "lg:col-span-2"}
+        >
+          <RankedBars items={data.byCategory} total={kpis.total.current} showDeltas={!sparse} comparable={dataHealth.comparable} />
+        </Panel>
+        {!sparse && (
+          <Panel title="Weekly rhythm" hint="When you log entries" className="lg:col-span-1">
+            <WeekRhythm days={data.dayOfWeek} />
+          </Panel>
+        )}
+      </div>
+      {!sparse && (
+        <Panel title="Top tags" hint="Change vs. previous period">
+          <RankedBars items={data.byTag} total={kpis.total.current} showDeltas comparable={dataHealth.comparable} />
+        </Panel>
+      )}
     </>
   );
 }
