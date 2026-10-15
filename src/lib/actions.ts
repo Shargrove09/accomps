@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { UNKNOWN_CATEGORY } from "@/lib/api-response";
-import { startOfWeek } from "date-fns";
+import { subDays } from "date-fns";
+import { localDayKey, startOfWeekLocal, todayLocal } from "@/lib/analytics-period";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -437,11 +438,6 @@ const EMPTY_STATS: AccomplishmentStats = {
   trends: { perDay: [], mostActiveDay: null, currentStreak: 0 },
 };
 
-/** UTC day bucket (YYYY-MM-DD) used for per-day trends and streak calc. */
-function dayKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
 /**
  * Aggregate stats over an optional date range: core totals, per-category and
  * per-tag breakdowns, per-day trend, most-active day, and the current
@@ -466,7 +462,7 @@ export async function getAccomplishmentStats({
           }
         : {};
 
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const weekStart = startOfWeekLocal();
 
     const streakSince = new Date();
     streakSince.setDate(streakSince.getDate() - 366);
@@ -538,7 +534,7 @@ export async function getAccomplishmentStats({
     // Per-day counts within the range.
     const perDayMap = new Map<string, number>();
     for (const row of rangeDates) {
-      const key = dayKey(row.date);
+      const key = localDayKey(row.date);
       perDayMap.set(key, (perDayMap.get(key) ?? 0) + 1);
     }
     const perDay = [...perDayMap.entries()]
@@ -550,15 +546,15 @@ export async function getAccomplishmentStats({
     );
 
     // Current streak: walk backwards from today over distinct logged days.
-    const daySet = new Set(streakRows.map((r) => dayKey(r.date)));
+    const daySet = new Set(streakRows.map((r) => localDayKey(r.date)));
     let currentStreak = 0;
-    const cursor = new Date();
-    if (!daySet.has(dayKey(cursor))) {
-      cursor.setDate(cursor.getDate() - 1); // allow a streak that ended yesterday
+    let cursor = todayLocal();
+    if (!daySet.has(localDayKey(cursor))) {
+      cursor = subDays(cursor, 1); // allow a streak that ended yesterday
     }
-    while (daySet.has(dayKey(cursor))) {
+    while (daySet.has(localDayKey(cursor))) {
       currentStreak++;
-      cursor.setDate(cursor.getDate() - 1);
+      cursor = subDays(cursor, 1);
     }
 
     return {

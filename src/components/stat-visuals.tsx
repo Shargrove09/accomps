@@ -1,4 +1,4 @@
-import { addDays, startOfWeek } from "date-fns";
+import { localDayKey, startOfWeekLocal } from "@/lib/analytics-period";
 import { ColorDot } from "@/components/color-dot";
 import { cn } from "@/lib/utils";
 
@@ -44,15 +44,13 @@ export function DotRow({ items, total }: { items: Counted[]; total: number }) {
   );
 }
 
-const dayKey = (d: Date) => d.toISOString().slice(0, 10);
-
 /** Sunday-to-Saturday of the current week, so the bars sum to the "This week" count. */
 export function currentWeek(perDay: { date: string; count: number }[]) {
   const counts = new Map(perDay.map((d) => [d.date, d.count]));
-  const start = startOfWeek(new Date(), { weekStartsOn: 0 });
-  const today = dayKey(new Date());
+  const start = startOfWeekLocal(); // +12h keeps the key on the right day across DST
+  const today = localDayKey(new Date());
   return Array.from({ length: 7 }, (_, i) => {
-    const key = dayKey(addDays(start, i));
+    const key = localDayKey(new Date(start.getTime() + (i * 24 + 12) * 3600_000));
     return { key, count: counts.get(key) ?? 0, isToday: key === today };
   });
 }
