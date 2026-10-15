@@ -45,7 +45,7 @@ mcp = FastMCP(
 
 @mcp.tool()
 def add_accomplishment(
-    title: str, category: str, tags: str, description: str = ""
+    title: str, category: str, tags: str, description: str = "", date: str = ""
 ) -> str:
     """Record a new accomplishment described in the user's CURRENT message. `tags` is a
     comma-separated string. Reuse existing categories/tags (call list_categories /
@@ -56,13 +56,18 @@ def add_accomplishment(
     `category` must ALREADY EXIST — this tool never creates one. Close variants (case,
     plurals, small typos) snap to the existing category automatically. If it matches
     nothing, this returns WITHOUT saving and you must ask the user which category to
-    use."""
+    use.
+
+    `date` (YYYY-MM-DD) is the day it happened. Pass it only when the user states or
+    implies a past day you can resolve exactly; otherwise leave it empty for today.
+    Future dates are rejected."""
     return accomps_tools.add_accomplishment.invoke(
         {
             "title": title,
             "category": category,
             "tags": tags,
             "description": description,
+            "date": date,
         }
     )
 

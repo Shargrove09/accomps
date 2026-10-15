@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { title, description, category, tags } = body;
+    const { title, description, category, tags, date } = body;
 
     if (!title || !category || !Array.isArray(tags)) {
       return jsonError(
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       description,
       category,
       tags,
+      date,
     });
 
     // addAccomplishment returns { success: false, error } on validation/DB

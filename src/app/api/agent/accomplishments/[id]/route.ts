@@ -5,6 +5,7 @@ import {
   deleteAccomplishment,
 } from "@/lib/actions";
 import { validateAgentApiKey } from "@/lib/api-auth";
+import { resolveEntryDate } from "@/lib/analytics-period";
 import {
   jsonError,
   jsonUnknownCategory,
@@ -40,6 +41,13 @@ export async function PATCH(
     const body = await request.json();
     const { title, description, category, tags, date } = body;
 
+    // A bare YYYY-MM-DD is a local calendar day; new Date() would read it as UTC midnight.
+    const dateOnly = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const entryDate = dateOnly ? resolveEntryDate(date) : null;
+    if (dateOnly && !entryDate) {
+      return jsonError("date must be a valid YYYY-MM-DD that is not in the future", 400);
+    }
+
     // Partial update: updateAccomplishment does a full replace (and wipes tags if
     // omitted), so overlay only the provided fields onto the existing record.
     const result = await updateAccomplishment({
@@ -48,7 +56,7 @@ export async function PATCH(
       description: description ?? existing.description ?? undefined,
       category: category ?? existing.category.name,
       tags: normalizeTags(tags) ?? existing.tags.map((t) => t.tag.name),
-      ...(date && { date: new Date(date) }),
+      ...(date && { date: entryDate ?? new Date(date) }),
     });
 
     if (!result.success) {

@@ -39,7 +39,7 @@ def _category_error(response) -> str | None:
 
 @tool
 def add_accomplishment(
-    title: str, category: str, tags: str, description: str = ""
+    title: str, category: str, tags: str, description: str = "", date: str = ""
 ) -> str:
     """
     Adds a new accomplishment to the tracker.
@@ -60,6 +60,9 @@ def add_accomplishment(
         description (str, optional): A more detailed description of the accomplishment, corrected for typos and grammar.
             If the user did not provide a description, generate a concise one-sentence description
             in natural language from the title and context before calling this tool — do not leave it blank.
+        date (str, optional): The day it happened, as YYYY-MM-DD. Pass it ONLY when the user states or
+            clearly implies a past day (e.g. "yesterday", "last Friday") and you can resolve it to an
+            exact date; otherwise leave it empty and it is recorded as today. Future dates are rejected.
 
     Returns:
         str: A message indicating success or failure of the operation.
@@ -101,6 +104,8 @@ def add_accomplishment(
         "category": normalized["category"],
         "tags": normalized["tags"],
     }
+    if date.strip():
+        payload["date"] = date.strip()
 
     try:
         response = requests.post(api_url, json=payload, headers=headers)
