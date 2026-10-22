@@ -17,9 +17,12 @@ const DEFAULT_COLOR = "#6B7280";
 export function AddAccomplishmentForm({
   categories: categoryOptions,
   tags: tagOptions,
+  onAdded,
 }: {
   categories: CategoryOption[];
   tags: TagOption[];
+  /** Called after a successful submit, once the form has reset. */
+  onAdded?: () => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -158,6 +161,7 @@ export function AddAccomplishmentForm({
       // created by this submit shows up in the dropdowns without a second
       // round trip from here.
       router.refresh();
+      onAdded?.();
     });
   };
 

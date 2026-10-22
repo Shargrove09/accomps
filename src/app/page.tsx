@@ -1,23 +1,26 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { AddAccomplishmentForm } from "@/components/add-accomplishment-form";
+import { TZDate } from "@date-fns/tz";
+import { format } from "date-fns";
+import { AddAccomplishmentPanel } from "@/components/add-accomplishment-panel";
+import { OpenAddPanelButton } from "@/components/open-add-panel-button";
 import { AccomplishmentsList } from "@/components/accomplishments-list";
 import { StatsOverview } from "@/components/stats-overview";
-import {
-  ArrowUpRight,
-  Calendar,
-  Folder,
-  Plus,
-  Tag,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowUpRight, Calendar, Folder, Tag, TrendingUp } from "lucide-react";
 import { db } from "@/lib/db";
 import { getCategories, getExistingTags } from "@/lib/actions";
+import { APP_TZ } from "@/lib/analytics-period";
 import { cn } from "@/lib/utils";
 import type { CategoryOption, TagOption } from "@/lib/types";
 
 // Mark this page as dynamic to prevent static evaluation during build
 export const dynamic = "force-dynamic";
+
+function greeting(hour: number) {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 const QUICK_ACTIONS = [
   {
@@ -85,18 +88,21 @@ export default async function Home() {
     getCategories(),
     getExistingTags(),
   ]);
+  const now = TZDate.tz(APP_TZ);
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-mischka mb-4">
-          Track Your Daily Accomplishments
-        </h1>
-        <p className="text-lg text-ink-muted max-w-2xl mx-auto">
-          Record your achievements, organize them with tags and categories, and
-          visualize your progress over time.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-mischka">
+            {greeting(now.getHours())}
+          </h1>
+          <p className="mt-1 text-lg text-ink-muted">
+            {format(now, "EEEE, MMMM d")}
+          </p>
+        </div>
+        <OpenAddPanelButton />
       </div>
 
       {/* Quick Stats */}
@@ -116,15 +122,7 @@ export default async function Home() {
       </Suspense>
 
       {/* Add New Accomplishment */}
-      <div className="bg-ebony-clay  rounded-lg shadow-sm border border-kimberly p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Plus className="h-5 w-5 text-ink-muted" />
-          <h2 className="text-xl font-semibold text-mischka">
-            Add New Accomplishment
-          </h2>
-        </div>
-        <AddAccomplishmentForm categories={categories} tags={tags} />
-      </div>
+      <AddAccomplishmentPanel categories={categories} tags={tags} />
 
       {/* Recent Accomplishments */}
       <div className="bg-ebony-clay rounded-lg shadow-sm border border-kimberly ">
